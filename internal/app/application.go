@@ -85,7 +85,7 @@ func (a *Application) postAddr(w http.ResponseWriter, r *http.Request) bool {
 		return false
 	}
 
-	// Добавляем в хранилилище если ранее не было добавлено.
+	// Добавляем в хранилилище если ранее не было добавлено
 	short, ok := a.store.GetShort(addr)
 	if !ok {
 		short = a.shortener.Short(addr)

@@ -4,25 +4,26 @@ import "testing"
 
 func TestSet(t *testing.T) {
 
-	var cases = []struct {
+	var tests = []struct {
+		name  string
 		addr  string
 		short string
-		ok    bool
+		want  bool
 	}{
-		{"", "", false},
-		{"", "t0", false},
-		{"ya.ru", "", false},
-		{"ya.ru", "t1", true},
-		{"http://ya.ru", "t2", true},
+		{"empty", "", "", false},
+		{"empty addr", "", "t0", false},
+		{"empty short", "ya.ru", "", false},
+		{"t1", "ya.ru", "t1", true},
+		{"t2", "http://ya.ru", "t2", true},
 	}
 
 	storage := NewMemstore()
 
-	for _, c := range cases {
+	for _, c := range tests {
 		ok := storage.Set(c.addr, c.short)
-		if c.ok != ok {
+		if c.want != ok {
 			t.Errorf("error set addr: '%s' (%s) - get %v, want %v",
-				c.addr, c.short, ok, c.ok)
+				c.addr, c.short, ok, c.want)
 			continue
 		}
 	}
