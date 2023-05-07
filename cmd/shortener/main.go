@@ -33,7 +33,7 @@ func run() error {
 		ReadTimeout:  timeout,
 		WriteTimeout: timeout,
 		Addr:         address,
-		Handler:      application.GetMux(),
+		Handler:      application.NewRouter(),
 	}
 
 	return s.ListenAndServe()

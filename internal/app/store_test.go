@@ -1,6 +1,10 @@
+// Тестирование хранилища
+
 package app
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestSet(t *testing.T) {
 

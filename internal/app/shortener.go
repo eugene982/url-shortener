@@ -1,3 +1,7 @@
+// "Сокращатель" ссылок, построен на снове алгоритма crc64,
+// доступного в стандартной библиотеке.
+// Удовлетворяет интерфейсу "Shortener"
+
 package app
 
 import (
@@ -9,6 +13,9 @@ type SimpleShortener struct {
 	hashLen int          // размер сокращения
 	crcTab  *crc64.Table // для контрольной суммы
 }
+
+// Утверждение типа, ошибка компиляции
+var _ Shortener = (*SimpleShortener)(nil)
 
 // Функция-конструктор
 func NewSimpleShortener() *SimpleShortener {
