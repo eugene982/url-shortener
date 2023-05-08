@@ -1,11 +1,12 @@
 // "Сокращатель" ссылок, построен на снове алгоритма crc64,
 // доступного в стандартной библиотеке.
 // Удовлетворяет интерфейсу "Shortener"
-
-package app
+package shortener
 
 import (
 	"hash/crc64"
+
+	"github.com/eugene982/url-shortener/internal/app"
 )
 
 type SimpleShortener struct {
@@ -15,7 +16,7 @@ type SimpleShortener struct {
 }
 
 // Утверждение типа, ошибка компиляции
-var _ Shortener = (*SimpleShortener)(nil)
+var _ app.Shortener = (*SimpleShortener)(nil)
 
 // Функция-конструктор
 func NewSimpleShortener() *SimpleShortener {

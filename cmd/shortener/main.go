@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/eugene982/url-shortener/internal/app"
+	"github.com/eugene982/url-shortener/internal/config"
+	"github.com/eugene982/url-shortener/internal/shortener"
+	"github.com/eugene982/url-shortener/internal/storage"
 )
-
-var address = "localhost:8080"
-var timeout = 30 * time.Second
 
 func main() {
 
@@ -23,18 +23,21 @@ func main() {
 // Установка параметров сервера и его запуск
 func run() error {
 
-	sh := app.NewSimpleShortener()
-	st := app.NewMemstore()
+	sh := shortener.NewSimpleShortener()
+	st := storage.NewMemstore()
 
-	application := app.NewApplication(sh, st)
+	conf := config.GetConfig()
+	application := app.NewApplication(sh, st, conf.Base)
 
 	// Установим таймауты, вдруг соединение будет нестабильным
 	s := &http.Server{
-		ReadTimeout:  timeout,
-		WriteTimeout: timeout,
-		Addr:         address,
+		ReadTimeout:  time.Duration(conf.Timeout) * time.Second,
+		WriteTimeout: time.Duration(conf.Timeout) * time.Second,
+		Addr:         conf.Addr,
 		Handler:      application.NewRouter(),
 	}
+
+	log.Println("service start on address:", conf.Addr)
 
 	return s.ListenAndServe()
 }

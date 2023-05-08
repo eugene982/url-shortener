@@ -1,8 +1,9 @@
 // Хранилище раннее сгенерированных ссылок.
 // построен на мапе.
 // Удовлетворяет интерфейсу "Storage"
+package storage
 
-package app
+import "github.com/eugene982/url-shortener/internal/app"
 
 // Объявление структуры-хранителя
 type MemStore struct {
@@ -11,7 +12,7 @@ type MemStore struct {
 }
 
 // Утверждение типа, ошибка компиляции
-var _ Storage = (*MemStore)(nil)
+var _ app.Storage = (*MemStore)(nil)
 
 // Функция-конструктор нового хранилща
 func NewMemstore() *MemStore {

@@ -1,6 +1,6 @@
 // Тестирование хранилища
 
-package app
+package storage
 
 import (
 	"testing"

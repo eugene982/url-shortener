@@ -3,6 +3,10 @@
 // В дальнейшем их можно будет разложить по собственным пакетам (route, store...)
 package app
 
+import (
+	"strings"
+)
+
 // Сокращатель ссылок
 type Shortener interface {
 	Short(string) string
@@ -19,9 +23,13 @@ type Storage interface {
 type Application struct {
 	shortener Shortener
 	store     Storage
+	baseAddr  string
 }
 
 // Функция конструктор приложения.
-func NewApplication(shortener Shortener, store Storage) *Application {
-	return &Application{shortener, store}
+func NewApplication(shortener Shortener, store Storage, baseAddr string) *Application {
+	if baseAddr != "" && !strings.HasSuffix(baseAddr, "/") {
+		baseAddr += "/"
+	}
+	return &Application{shortener, store, baseAddr}
 }
