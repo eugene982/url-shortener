@@ -144,9 +144,9 @@ func (a *Application) findOrGetShort(addr string, r *http.Request) (string, erro
 		}
 	}
 
-	if a.baseAddr == "" {
+	if a.baseUrl == "" {
 		return "http://" + r.Host + "/" + short, nil
 	} else {
-		return a.baseAddr + short, nil
+		return a.baseUrl + short, nil
 	}
 }

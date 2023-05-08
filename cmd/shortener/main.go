@@ -27,17 +27,17 @@ func run() error {
 	st := storage.NewMemstore()
 
 	conf := config.GetConfig()
-	application := app.NewApplication(sh, st, conf.Base)
+	application := app.NewApplication(sh, st, conf.BaseUrl)
 
 	// Установим таймауты, вдруг соединение будет нестабильным
 	s := &http.Server{
 		ReadTimeout:  time.Duration(conf.Timeout) * time.Second,
 		WriteTimeout: time.Duration(conf.Timeout) * time.Second,
-		Addr:         conf.Addr,
+		Addr:         conf.ServAddr,
 		Handler:      application.NewRouter(),
 	}
 
-	log.Println("service start on address:", conf.Addr)
+	log.Println("service start on address:", conf.ServAddr)
 
 	return s.ListenAndServe()
 }

@@ -1,6 +1,4 @@
-// Пакет приложения. на данном этапе объём кода небольшой,
-// поэтому все компоненты сложены в один пакет.
-// В дальнейшем их можно будет разложить по собственным пакетам (route, store...)
+// Пакет приложения
 package app
 
 import (
@@ -23,13 +21,13 @@ type Storage interface {
 type Application struct {
 	shortener Shortener
 	store     Storage
-	baseAddr  string
+	baseUrl   string
 }
 
 // Функция конструктор приложения.
-func NewApplication(shortener Shortener, store Storage, baseAddr string) *Application {
-	if baseAddr != "" && !strings.HasSuffix(baseAddr, "/") {
-		baseAddr += "/"
+func NewApplication(shortener Shortener, store Storage, baseUrl string) *Application {
+	if baseUrl != "" && !strings.HasSuffix(baseUrl, "/") {
+		baseUrl += "/"
 	}
-	return &Application{shortener, store, baseAddr}
+	return &Application{shortener, store, baseUrl}
 }
