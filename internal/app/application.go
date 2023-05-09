@@ -13,7 +13,6 @@ type Shortener interface {
 // Хранитель ссылок
 type Storage interface {
 	GetAddr(string) (string, bool)
-	GetShort(string) (string, bool)
 	Set(string, string) bool
 }
 

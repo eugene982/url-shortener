@@ -7,8 +7,7 @@ import "github.com/eugene982/url-shortener/internal/app"
 
 // Объявление структуры-хранителя
 type MemStore struct {
-	addrList  map[string]string
-	shortList map[string]string
+	addrList map[string]string
 }
 
 // Утверждение типа, ошибка компиляции
@@ -17,15 +16,8 @@ var _ app.Storage = (*MemStore)(nil)
 // Функция-конструктор нового хранилща
 func NewMemstore() *MemStore {
 	return &MemStore{
-		make(map[string]string, 8),
-		make(map[string]string, 8),
+		make(map[string]string),
 	}
-}
-
-// Получение короткой ссылки по полному адресу
-func (m *MemStore) GetShort(addr string) (short string, ok bool) {
-	short, ok = m.shortList[addr]
-	return
 }
 
 // Получение полного адреса по короткой ссылке
@@ -40,13 +32,6 @@ func (m *MemStore) Set(addr string, short string) bool {
 		return false
 	}
 
-	// если по данной короткой ссылке уже содержатся данные
-	// необходимо их почистить, чтоб не занимали место
-	if old, ok := m.addrList[short]; ok {
-		delete(m.shortList, old)
-	}
-
 	m.addrList[short] = addr
-	m.shortList[addr] = short
 	return true
 }

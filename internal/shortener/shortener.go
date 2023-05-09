@@ -10,7 +10,7 @@ import (
 )
 
 type SimpleShortener struct {
-	symTab  []byte       // симфолы для хеша
+	symTab  []byte       // символы для хеша
 	hashLen int          // размер сокращения
 	crcTab  *crc64.Table // для контрольной суммы
 }
@@ -45,11 +45,12 @@ func NewSimpleShortener() *SimpleShortener {
 // Будем сохкращать строку до 10 символов
 func (s *SimpleShortener) Short(addr string) string {
 	sum := crc64.Checksum([]byte(addr), s.crcTab)
-	return s.hash(sum)
+	return s.toString(sum)
 }
 
-// Функция хеширует число до нужной длинны
-func (s *SimpleShortener) hash(val uint64) string {
+// Функция преобразует хэш в строку нужной длинны
+// Пробовал на основе base64 но случаются коллизии т.к. начало строк часто совпадают.
+func (s *SimpleShortener) toString(val uint64) string {
 	buff := make([]byte, s.hashLen) // можно вынести в структуру, чтоб каждый раз не пересоздавать.
 
 	reminder := val

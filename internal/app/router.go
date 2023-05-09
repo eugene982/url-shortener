@@ -2,7 +2,6 @@
 package app
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -17,10 +16,8 @@ func (a *Application) NewRouter() http.Handler {
 
 	r := chi.NewRouter()
 
-	r.Get("/{short}", a.getAddr)
-
-	r.Post("/", a.postAddr)
-	r.Post("/api/shorten", a.postAddrJSON)
+	r.Get("/{short}", a.findAddr)
+	r.Post("/", a.createShort)
 
 	// во всех остальных случаях 404
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
@@ -31,7 +28,7 @@ func (a *Application) NewRouter() http.Handler {
 }
 
 // Получение полного адреса по короткой ссылке
-func (a *Application) getAddr(w http.ResponseWriter, r *http.Request) {
+func (a *Application) findAddr(w http.ResponseWriter, r *http.Request) {
 
 	short := chi.URLParam(r, "short")
 	addr, ok := a.store.GetAddr(short)
@@ -45,7 +42,7 @@ func (a *Application) getAddr(w http.ResponseWriter, r *http.Request) {
 }
 
 // Генерирование короткой ссылки и сохранеине её во временном хранилище
-func (a *Application) postAddr(w http.ResponseWriter, r *http.Request) {
+func (a *Application) createShort(w http.ResponseWriter, r *http.Request) {
 
 	// чтобы длиинно не писать...
 	hasErr := func(e error) bool { return errorNotFound(e, w, r) }
@@ -61,53 +58,13 @@ func (a *Application) postAddr(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	short, err := a.findOrGetShort(string(body), r)
+	short, err := a.getAndWriteShort(string(body), r)
 	if hasErr(err) {
 		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
 	io.WriteString(w, short)
-}
-
-// Откуда-то в тестах взялся JSON?? Не видел я задания с ним.
-// работаем по ситуации...
-func (a *Application) postAddrJSON(w http.ResponseWriter, r *http.Request) {
-
-	hasErr := func(e error) bool { return errorNotFound(e, w, r) }
-
-	err := checkContentType("application/json", r)
-	if hasErr(err) {
-		return
-	}
-
-	// запрос
-	request := struct {
-		URL string `json:"url"`
-	}{}
-
-	err = json.NewDecoder(r.Body).Decode(&request)
-	defer r.Body.Close()
-	if hasErr(err) {
-		return
-	}
-
-	short, err := a.findOrGetShort(string(request.URL), r)
-	if hasErr(err) {
-		return
-	}
-
-	// ответ
-	result := struct {
-		Result string `json:"result"`
-	}{short}
-
-	// не двигать!!!
-	w.Header().Set("Content-Type", "application/json;charset=utf-8")
-	w.WriteHeader(http.StatusCreated)
-
-	err = json.NewEncoder(w).Encode(result)
-	hasErr(err)
 }
 
 // при ошибке всегда возвращаем 404
@@ -129,24 +86,16 @@ func checkContentType(value string, r *http.Request) error {
 }
 
 // ищем или пытаемся создать короткую ссылку
-func (a *Application) findOrGetShort(addr string, r *http.Request) (string, error) {
+func (a *Application) getAndWriteShort(addr string, r *http.Request) (string, error) {
 
 	if addr == "" {
 		return "", fmt.Errorf("address is empty")
 	}
 
-	// Добавляем в хранилилище если ранее не было добавлено
-	short, ok := a.store.GetShort(addr)
-	if !ok {
-		short = a.shortener.Short(addr)
-		if !a.store.Set(addr, short) { // не удалось поместить, например пустые строки.
-			return "", fmt.Errorf("error short address %s", addr)
-		}
+	short := a.shortener.Short(addr)
+	if !a.store.Set(addr, short) { // не удалось поместить, например пустые строки.
+		return "", fmt.Errorf("error short address %s", addr)
 	}
 
-	if a.baseURL == "" {
-		return "http://" + r.Host + "/" + short, nil
-	} else {
-		return a.baseURL + short, nil
-	}
+	return a.baseURL + short, nil
 }

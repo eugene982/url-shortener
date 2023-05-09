@@ -25,3 +25,6 @@ vendor/
 #autotests
 .github
 bin
+
+#client
+cmd/client

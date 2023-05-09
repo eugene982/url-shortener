@@ -33,35 +33,6 @@ func TestSet(t *testing.T) {
 	}
 }
 
-func TestGetShort(t *testing.T) {
-
-	var cases = []struct {
-		addr  string
-		short string
-	}{
-		{"ya.ru", "t1"},
-		{"ya.ru", "t2"},
-		{"https://ya.ru", "t3"},
-		{"ya.ru", "t4"},
-		{"ya.ru", "t5"},
-	}
-
-	storage := NewMemstore()
-
-	for _, c := range cases {
-
-		if !storage.Set(c.addr, c.short) {
-			t.Errorf("error set addr: '%s' (%s)",
-				c.addr, c.short)
-		}
-
-		if get, ok := storage.GetShort(c.addr); !ok || c.short != get {
-			t.Errorf("error get short: addr %s, get %s, want %s",
-				c.addr, get, c.short)
-		}
-	}
-}
-
 func TestGetAddr(t *testing.T) {
 
 	var cases = []struct {

@@ -26,7 +26,7 @@ func run() error {
 	sh := shortener.NewSimpleShortener()
 	st := storage.NewMemstore()
 
-	conf := config.GetConfig()
+	conf := config.Config()
 	application := app.NewApplication(sh, st, conf.BaseURL)
 
 	// Установим таймауты, вдруг соединение будет нестабильным
