@@ -21,13 +21,13 @@ type Storage interface {
 type Application struct {
 	shortener Shortener
 	store     Storage
-	baseUrl   string
+	baseURL   string
 }
 
 // Функция конструктор приложения.
-func NewApplication(shortener Shortener, store Storage, baseUrl string) *Application {
-	if baseUrl != "" && !strings.HasSuffix(baseUrl, "/") {
-		baseUrl += "/"
+func NewApplication(shortener Shortener, store Storage, baseURL string) *Application {
+	if baseURL != "" && !strings.HasSuffix(baseURL, "/") {
+		baseURL += "/"
 	}
-	return &Application{shortener, store, baseUrl}
+	return &Application{shortener, store, baseURL}
 }

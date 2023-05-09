@@ -20,7 +20,7 @@ func (a *Application) NewRouter() http.Handler {
 	r.Get("/{short}", a.getAddr)
 
 	r.Post("/", a.postAddr)
-	r.Post("/api/shorten", a.postAddrJson)
+	r.Post("/api/shorten", a.postAddrJSON)
 
 	// во всех остальных случаях 404
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
@@ -72,7 +72,7 @@ func (a *Application) postAddr(w http.ResponseWriter, r *http.Request) {
 
 // Откуда-то в тестах взялся JSON?? Не видел я задания с ним.
 // работаем по ситуации...
-func (a *Application) postAddrJson(w http.ResponseWriter, r *http.Request) {
+func (a *Application) postAddrJSON(w http.ResponseWriter, r *http.Request) {
 
 	hasErr := func(e error) bool { return errorNotFound(e, w, r) }
 
@@ -144,9 +144,9 @@ func (a *Application) findOrGetShort(addr string, r *http.Request) (string, erro
 		}
 	}
 
-	if a.baseUrl == "" {
+	if a.baseURL == "" {
 		return "http://" + r.Host + "/" + short, nil
 	} else {
-		return a.baseUrl + short, nil
+		return a.baseURL + short, nil
 	}
 }

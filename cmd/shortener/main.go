@@ -27,7 +27,7 @@ func run() error {
 	st := storage.NewMemstore()
 
 	conf := config.GetConfig()
-	application := app.NewApplication(sh, st, conf.BaseUrl)
+	application := app.NewApplication(sh, st, conf.BaseURL)
 
 	// Установим таймауты, вдруг соединение будет нестабильным
 	s := &http.Server{
