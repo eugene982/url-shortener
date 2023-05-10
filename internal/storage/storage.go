@@ -27,11 +27,6 @@ func (m *MemStore) GetAddr(short string) (addr string, ok bool) {
 }
 
 // Установка соответствия между адресом и короткой ссылкой
-func (m *MemStore) Set(addr string, short string) bool {
-	if addr == "" || short == "" {
-		return false
-	}
-
+func (m *MemStore) Set(addr string, short string) {
 	m.addrList[short] = addr
-	return true
 }

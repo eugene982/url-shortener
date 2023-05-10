@@ -15,14 +15,12 @@ import (
 
 // простое хранилище
 type mokStore struct {
-	getAddrFunc  func(string) (string, bool)
-	getShortFunc func(string) (string, bool)
-	setFunc      func(string, string) bool
+	getAddrFunc func(string) (string, bool)
+	setFunc     func(string, string)
 }
 
-func (m mokStore) GetAddr(s string) (string, bool)  { return m.getAddrFunc(s) }
-func (m mokStore) GetShort(s string) (string, bool) { return m.getShortFunc(s) }
-func (m mokStore) Set(s1 string, s2 string) bool    { return m.setFunc(s1, s2) }
+func (m mokStore) GetAddr(s string) (string, bool) { return m.getAddrFunc(s) }
+func (m mokStore) Set(s1 string, s2 string)        { m.setFunc(s1, s2) }
 
 // простой сокращатель
 type mokShorter func(string) string
@@ -31,9 +29,8 @@ func (m mokShorter) Short(s string) string { return m(s) }
 
 func newTestApp(t *testing.T) *Application {
 	st := mokStore{
-		getShortFunc: func(string) (string, bool) { return "", false },
-		getAddrFunc:  func(addr string) (string, bool) { return addr, addr != "" },
-		setFunc:      func(s1, s2 string) bool { return s1 == s2 },
+		getAddrFunc: func(addr string) (string, bool) { return addr, addr != "" },
+		setFunc:     func(s1, s2 string) {},
 	}
 	sh := mokShorter(func(addr string) string { return addr })
 

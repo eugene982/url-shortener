@@ -13,7 +13,7 @@ type Shortener interface {
 // Хранитель ссылок
 type Storage interface {
 	GetAddr(string) (string, bool)
-	Set(string, string) bool
+	Set(string, string)
 }
 
 // Управлятель ссылок
@@ -25,7 +25,7 @@ type Application struct {
 
 // Функция конструктор приложения.
 func NewApplication(shortener Shortener, store Storage, baseURL string) *Application {
-	if baseURL != "" && !strings.HasSuffix(baseURL, "/") {
+	if !strings.HasSuffix(baseURL, "/") {
 		baseURL += "/"
 	}
 	return &Application{shortener, store, baseURL}
