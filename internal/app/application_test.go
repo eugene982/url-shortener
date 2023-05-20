@@ -7,6 +7,6 @@ import (
 )
 
 func TestNewApplication(t *testing.T) {
-	a := NewApplication(nil, nil, "")
+	a := NewApplication(nil, nil, nil, "")
 	assert.IsType(t, &Application{}, a)
 }

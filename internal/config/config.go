@@ -11,6 +11,7 @@ type Configuration struct {
 	ServAddr string `env:"SERVER_ADDRESS"` // адрес сервера
 	BaseURL  string `env:"BASE_URL"`       // базовый адрес
 	Timeout  int
+	LogLevel string `env:"LOG_LEVEL"` // уровень логирования
 }
 
 var config Configuration
@@ -20,6 +21,7 @@ func init() {
 	flag.StringVar(&config.ServAddr, "a", ":8080", "server address")
 	flag.StringVar(&config.BaseURL, "b", "http://localhost:8080", "base address")
 	flag.IntVar(&config.Timeout, "t", 30, "timeout in seconds")
+	flag.StringVar(&config.LogLevel, "l", "info", "log level")
 
 	// получаем конфигурацию из флагов и/или окружения
 	flag.Parse()
@@ -33,6 +35,9 @@ func init() {
 		}
 		if envConf.BaseURL != "" {
 			config.BaseURL = envConf.BaseURL
+		}
+		if envConf.LogLevel != "" {
+			config.LogLevel = envConf.LogLevel
 		}
 	}
 }

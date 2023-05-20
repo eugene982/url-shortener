@@ -4,7 +4,6 @@ package app
 import (
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strings"
 
@@ -16,12 +15,16 @@ func (a *Application) NewRouter() http.Handler {
 
 	r := chi.NewRouter()
 
+	r.Use(a.loggMiddleware) // прослойка логирования
+
 	r.Get("/{short}", a.findAddr)
 	r.Post("/", a.createShort)
 
 	// во всех остальных случаях 404
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
-		writeErrNotFound(fmt.Errorf("method not allowed"), w, r)
+		a.logger.Warn("not allowed",
+			"method", r.Method)
+		http.NotFound(w, r)
 	})
 
 	return r
@@ -33,7 +36,9 @@ func (a *Application) findAddr(w http.ResponseWriter, r *http.Request) {
 	short := chi.URLParam(r, "short")
 	addr, ok := a.store.GetAddr(short)
 	if !ok {
-		writeErrNotFound(fmt.Errorf("short address %s not found", short), w, r)
+		a.logger.Warn("not found",
+			"short", short)
+		http.NotFound(w, r)
 		return
 	}
 
@@ -46,31 +51,28 @@ func (a *Application) createShort(w http.ResponseWriter, r *http.Request) {
 
 	err := checkContentType("text/plain", r)
 	if err != nil {
-		writeErrNotFound(err, w, r)
+		a.logger.Warn(err.Error())
+		http.NotFound(w, r)
 		return
 	}
 
 	body, err := io.ReadAll(r.Body)
 	defer r.Body.Close() // Вроде как надо закрывать если что-то там есть...
 	if err != nil {
-		writeErrNotFound(err, w, r)
+		a.logger.Error(err)
+		http.NotFound(w, r)
 		return
 	}
 
 	short, err := a.getAndWriteShort(string(body), w, r)
 	if err != nil {
-		writeErrNotFound(err, w, r)
+		a.logger.Warn(err.Error())
+		http.NotFound(w, r)
 		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
 	io.WriteString(w, short)
-}
-
-// при ошибке всегда возвращаем 404
-func writeErrNotFound(err error, w http.ResponseWriter, r *http.Request) {
-	log.Println("error:", err)
-	http.NotFound(w, r)
 }
 
 // проверка заголовка на формат

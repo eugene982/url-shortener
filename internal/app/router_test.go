@@ -3,6 +3,7 @@
 package app
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -27,14 +28,25 @@ type mokShorter func(string) string
 
 func (m mokShorter) Short(s string) string { return m(s) }
 
+// простой логгер
+type mokLogger struct{}
+
+func (*mokLogger) Debug(msg string, a ...any) { fmt.Println(msg, a) }
+func (*mokLogger) Info(msg string, a ...any)  { fmt.Println(msg, a) }
+func (*mokLogger) Warn(msg string, a ...any)  { fmt.Println(msg, a) }
+func (*mokLogger) Error(err error, a ...any)  { fmt.Println(err, a) }
+
+// Тесты
+
 func newTestApp(t *testing.T) *Application {
 	st := mokStore{
 		getAddrFunc: func(addr string) (string, bool) { return addr, addr != "" },
 		setFunc:     func(s1, s2 string) {},
 	}
 	sh := mokShorter(func(addr string) string { return addr })
+	logger := &mokLogger{}
 
-	a := NewApplication(sh, st, "")
+	a := NewApplication(sh, st, logger, "")
 	require.NotNil(t, a)
 
 	return a

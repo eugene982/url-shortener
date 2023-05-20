@@ -8,6 +8,7 @@ import (
 
 	"github.com/eugene982/url-shortener/internal/app"
 	"github.com/eugene982/url-shortener/internal/config"
+	"github.com/eugene982/url-shortener/internal/logger"
 	"github.com/eugene982/url-shortener/internal/shortener"
 	"github.com/eugene982/url-shortener/internal/storage"
 )
@@ -23,11 +24,16 @@ func main() {
 // Установка параметров сервера и его запуск
 func run() error {
 
+	conf := config.Config()
+
 	sh := shortener.NewSimpleShortener()
 	st := storage.NewMemstore()
+	logger, err := logger.NewZapLogger(conf.LogLevel)
+	if err != nil {
+		return err
+	}
 
-	conf := config.Config()
-	application := app.NewApplication(sh, st, conf.BaseURL)
+	application := app.NewApplication(sh, st, logger, conf.BaseURL)
 
 	// Установим таймауты, вдруг соединение будет нестабильным
 	s := &http.Server{
@@ -37,7 +43,13 @@ func run() error {
 		Handler:      application.NewRouter(),
 	}
 
-	log.Println("service start on address:", conf.ServAddr)
+	logger.Info("service start",
+		"addres", conf.ServAddr,
+		"base_url", conf.BaseURL,
+	)
 
-	return s.ListenAndServe()
+	err = s.ListenAndServe()
+	logger.Info("service stop",
+		"error", err)
+	return err
 }
