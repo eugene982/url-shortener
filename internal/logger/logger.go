@@ -1,18 +1,15 @@
 package logger
 
 import (
-	"go.uber.org/zap"
+	"net/http"
 
-	"github.com/eugene982/url-shortener/internal/app"
+	"go.uber.org/zap"
 )
 
 // Описание структуры логгера
 type ZapLogger struct {
 	zap *zap.Logger
 }
-
-// проверка на соответствие типа
-var _ app.Logger = (*ZapLogger)(nil)
 
 // Создание нового логгера
 func NewZapLogger(level string) (*ZapLogger, error) {
@@ -55,4 +52,34 @@ func (z *ZapLogger) Warn(msg string, a ...any) {
 // Ошибки
 func (z *ZapLogger) Error(err error, a ...any) {
 	z.zap.Sugar().Errorw(err.Error(), a...)
+}
+
+// структура захвата Ответа сервиса для логирования
+type LogResponseWriter struct {
+	http.ResponseWriter
+	size       int
+	statusCode int
+}
+
+func (l *LogResponseWriter) Size() int       { return l.size }
+func (l *LogResponseWriter) StatusCode() int { return l.statusCode }
+
+// Проверка на тип, на всяки....
+var _ http.ResponseWriter = (*LogResponseWriter)(nil)
+
+func NewLogResponseWriter(r http.ResponseWriter) *LogResponseWriter {
+	return &LogResponseWriter{r, 0, 0}
+}
+
+// Write implements http.ResponseWriter
+func (l *LogResponseWriter) Write(bytes []byte) (size int, err error) {
+	size, err = l.ResponseWriter.Write(bytes)
+	l.size += size
+	return
+}
+
+// WriteHeader implements http.ResponseWriter
+func (l *LogResponseWriter) WriteHeader(statusCode int) {
+	l.ResponseWriter.WriteHeader(statusCode)
+	l.statusCode = statusCode
 }

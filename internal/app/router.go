@@ -19,6 +19,7 @@ func (a *Application) NewRouter() http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(a.loggMiddleware) // прослойка логирования
+	r.Use(a.gzipMiddleware) // прослойка логирования
 
 	r.Get("/{short}", a.findAddr)
 	r.Post("/", a.createShort)
@@ -52,12 +53,6 @@ func (a *Application) findAddr(w http.ResponseWriter, r *http.Request) {
 
 // Генерирование короткой ссылки и сохранеине её во временном хранилище
 func (a *Application) createShort(w http.ResponseWriter, r *http.Request) {
-
-	if ok, err := checkContentType("text/plain", r); !ok {
-		a.logger.Warn(err.Error())
-		http.NotFound(w, r)
-		return
-	}
 
 	body, err := io.ReadAll(r.Body)
 	defer r.Body.Close() // Вроде как надо закрывать если что-то там есть...
