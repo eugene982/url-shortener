@@ -48,17 +48,11 @@ func newTestApp(t *testing.T) *Application {
 	sh := mokShorter(func(addr string) string { return addr })
 	logger := &mokLogger{}
 
-	a := NewApplication(sh, st, logger, "")
+	a, err := NewApplication(sh, st, logger, "", "")
 	require.NotNil(t, a)
+	require.NoError(t, err)
 
 	return a
-}
-
-func newTestServer(t *testing.T) *httptest.Server {
-	app := newTestApp(t)
-	ts := httptest.NewServer(app.NewRouter())
-	app.baseURL = ts.URL + "/"
-	return ts
 }
 
 func TestRouterMethods(t *testing.T) {
@@ -84,7 +78,9 @@ func TestRouterMethods(t *testing.T) {
 		{method: http.MethodTrace, want: want404},
 	}
 
-	router := newTestApp(t).NewRouter()
+	app := newTestApp(t)
+	defer app.Close()
+	router := app.NewRouter()
 
 	for _, tt := range tests {
 		t.Run(tt.method, func(t *testing.T) {
@@ -124,7 +120,10 @@ func TestRouterFindAddr(t *testing.T) {
 		// ...
 	}
 
-	router := newTestApp(t).NewRouter()
+	app := newTestApp(t)
+	defer app.Close()
+
+	router := app.NewRouter()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -187,7 +186,11 @@ func TestRouterCreateAddr(t *testing.T) {
 		// ...
 	}
 
-	ts := newTestServer(t)
+	app := newTestApp(t)
+	defer app.Close()
+
+	ts := httptest.NewServer(app.NewRouter())
+	app.baseURL = ts.URL + "/"
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -254,7 +257,10 @@ func TestRouterCreateApiShorten(t *testing.T) {
 		// ...
 	}
 
-	router := newTestApp(t).NewRouter()
+	app := newTestApp(t)
+	defer app.Close()
+
+	router := app.NewRouter()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -287,6 +293,8 @@ func TestRouterCreateApiShorten(t *testing.T) {
 
 func TestGzipCompression(t *testing.T) {
 	app := newTestApp(t)
+	defer app.Close()
+
 	handler := http.Handler(app.gzipMiddleware(http.HandlerFunc(app.createApiShorten)))
 
 	srv := httptest.NewServer(handler)

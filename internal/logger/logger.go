@@ -11,7 +11,7 @@ type ZapLogger struct {
 	zap *zap.Logger
 }
 
-// Создание нового логгера
+// Конструктор нового логгера
 func NewZapLogger(level string) (*ZapLogger, error) {
 	lvl, err := zap.ParseAtomicLevel(level)
 	if err != nil {

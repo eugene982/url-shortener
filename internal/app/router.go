@@ -19,7 +19,7 @@ func (a *Application) NewRouter() http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(a.loggMiddleware) // прослойка логирования
-	r.Use(a.gzipMiddleware) // прослойка логирования
+	r.Use(a.gzipMiddleware) // прослойка сжатия
 
 	r.Get("/{short}", a.findAddr)
 	r.Post("/", a.createShort)
@@ -73,6 +73,8 @@ func (a *Application) createShort(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, short)
 }
 
+// Генерирование короткой ссылки и сохранеине её во временном хранилище
+// из запроса формата JSON
 func (a *Application) createApiShorten(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close() // Очищаем тело
 
@@ -136,6 +138,11 @@ func (a *Application) getAndWriteShort(addr string, w http.ResponseWriter, r *ht
 	short := a.shortener.Short(addr)
 	if short == "" {
 		return "", fmt.Errorf("short url generation error")
+	}
+
+	// запись в файловое хранилище
+	if err := a.fileStorage.Append(addr, short); err != nil {
+		return "", err
 	}
 
 	a.store.Set(addr, short)

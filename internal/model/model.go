@@ -22,3 +22,10 @@ func (req RequestShorten) IsValid() (bool, error) {
 	}
 	return true, nil
 }
+
+// Данные для хранения в файловом хранилище
+type FileStoreData struct {
+	ID          string `json:"uuid"`
+	ShortURL    string `json:"short_url"`
+	OriginalURL string `json:"original_url"`
+}

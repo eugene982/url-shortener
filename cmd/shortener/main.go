@@ -33,7 +33,11 @@ func run() error {
 		return err
 	}
 
-	application := app.NewApplication(sh, st, logger, conf.BaseURL)
+	application, err := app.NewApplication(sh, st, logger, conf.BaseURL, conf.FileStoragePeth)
+	if err != nil {
+		return err
+	}
+	defer application.Close()
 
 	// Установим таймауты, вдруг соединение будет нестабильным
 	s := &http.Server{

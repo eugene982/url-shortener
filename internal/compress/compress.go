@@ -11,8 +11,10 @@ type GzipComressWriter struct {
 	zw *gzip.Writer
 }
 
+// Проверка на совместимость с интерфейсом http.ResponseWriter
 var _ http.ResponseWriter = (*GzipComressWriter)(nil)
 
+// Конструктор
 func NewGzipComressWriter(w http.ResponseWriter) (*GzipComressWriter, error) {
 	zw, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
 	if err != nil {
@@ -48,6 +50,10 @@ type GzipCompressReader struct {
 	zr *gzip.Reader
 }
 
+// Проверка на совместимость с интерфейсом io.ReadCloser
+var _ io.ReadCloser = (*GzipCompressReader)(nil)
+
+// Конструктор
 func NewGzipCompressReader(r io.ReadCloser) (*GzipCompressReader, error) {
 	zr, err := gzip.NewReader(r)
 	if err != nil {
