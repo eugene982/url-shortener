@@ -65,7 +65,7 @@ func (fs *FileStorage) ReadAll() ([]model.FileStoreData, error) {
 }
 
 // Добавление новых данных
-func (fs *FileStorage) Append(originalUrl, shortUrl string) error {
+func (fs *FileStorage) Append(originalURL, shortURL string) error {
 	if fs == nil {
 		return nil
 	}
@@ -73,8 +73,8 @@ func (fs *FileStorage) Append(originalUrl, shortUrl string) error {
 
 	data := model.FileStoreData{
 		ID:          strconv.Itoa(fs.counter),
-		OriginalURL: originalUrl,
-		ShortURL:    shortUrl,
+		OriginalURL: originalURL,
+		ShortURL:    shortURL,
 	}
 
 	writeBytes, err := json.Marshal(data)

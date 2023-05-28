@@ -23,7 +23,7 @@ func (a *Application) NewRouter() http.Handler {
 
 	r.Get("/{short}", a.findAddr)
 	r.Post("/", a.createShort)
-	r.Post("/api/shorten", a.createApiShorten)
+	r.Post("/api/shorten", a.createAPIShorten)
 
 	// во всех остальных случаях 404
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
@@ -75,7 +75,7 @@ func (a *Application) createShort(w http.ResponseWriter, r *http.Request) {
 
 // Генерирование короткой ссылки и сохранеине её во временном хранилище
 // из запроса формата JSON
-func (a *Application) createApiShorten(w http.ResponseWriter, r *http.Request) {
+func (a *Application) createAPIShorten(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close() // Очищаем тело
 
 	if ok, err := checkContentType("application/json", r); !ok {

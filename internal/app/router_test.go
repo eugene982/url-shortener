@@ -295,7 +295,7 @@ func TestGzipCompression(t *testing.T) {
 	app := newTestApp(t)
 	defer app.Close()
 
-	handler := http.Handler(app.gzipMiddleware(http.HandlerFunc(app.createApiShorten)))
+	handler := http.Handler(app.gzipMiddleware(http.HandlerFunc(app.createAPIShorten)))
 
 	srv := httptest.NewServer(handler)
 	defer srv.Close()

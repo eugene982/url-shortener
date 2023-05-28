@@ -77,10 +77,10 @@ func NewApplication(shortener Shortener, store Storage, logger Logger,
 }
 
 // закрываем приложение
-func (app *Application) Close() (err error) {
-	err = app.fileStorage.Close()
+func (a *Application) Close() (err error) {
+	err = a.fileStorage.Close()
 	if err != nil {
-		app.logger.Error(fmt.Errorf("error close file storage: %w", err))
+		a.logger.Error(fmt.Errorf("error close file storage: %w", err))
 	}
 	return
 }
