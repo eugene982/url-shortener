@@ -8,9 +8,11 @@ import (
 
 	"github.com/eugene982/url-shortener/internal/app"
 	"github.com/eugene982/url-shortener/internal/config"
-	"github.com/eugene982/url-shortener/internal/logger"
 	"github.com/eugene982/url-shortener/internal/shortener"
 	"github.com/eugene982/url-shortener/internal/storage"
+
+	"github.com/eugene982/url-shortener/internal/logger"
+	"github.com/eugene982/url-shortener/internal/logger/zaplogger"
 )
 
 func main() {
@@ -26,14 +28,19 @@ func run() error {
 
 	conf := config.Config()
 
-	sh := shortener.NewSimpleShortener()
-	st := storage.NewMemstore()
-	logger, err := logger.NewZapLogger(conf.LogLevel)
+	err := zaplogger.Initialize(conf.LogLevel)
 	if err != nil {
 		return err
 	}
 
-	application, err := app.NewApplication(sh, st, logger, conf.BaseURL, conf.FileStoragePeth)
+	store, err := storage.NewMemstore(conf.FileStoragePeth)
+	if err != nil {
+		return err
+	}
+
+	sh := shortener.NewSimpleShortener()
+
+	application, err := app.NewApplication(sh, store, conf.BaseURL)
 	if err != nil {
 		return err
 	}

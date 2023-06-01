@@ -10,6 +10,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/eugene982/url-shortener/internal/logger"
+	"github.com/eugene982/url-shortener/internal/middleware"
 	"github.com/eugene982/url-shortener/internal/model"
 )
 
@@ -18,8 +20,8 @@ func (a *Application) NewRouter() http.Handler {
 
 	r := chi.NewRouter()
 
-	r.Use(a.loggMiddleware) // прослойка логирования
-	r.Use(a.gzipMiddleware) // прослойка сжатия
+	r.Use(middleware.Log)  // прослойка логирования
+	r.Use(middleware.Gzip) // прослойка сжатия
 
 	r.Get("/{short}", a.findAddr)
 	r.Post("/", a.createShort)
@@ -27,7 +29,7 @@ func (a *Application) NewRouter() http.Handler {
 
 	// во всех остальных случаях 404
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
-		a.logger.Warn("not allowed",
+		logger.Warn("not allowed",
 			"method", r.Method)
 		http.NotFound(w, r)
 	})
@@ -41,7 +43,7 @@ func (a *Application) findAddr(w http.ResponseWriter, r *http.Request) {
 	short := chi.URLParam(r, "short")
 	addr, ok := a.store.GetAddr(short)
 	if !ok {
-		a.logger.Warn("not found",
+		logger.Warn("not found",
 			"short", short)
 		http.NotFound(w, r)
 		return
@@ -57,14 +59,14 @@ func (a *Application) createShort(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	defer r.Body.Close() // Вроде как надо закрывать если что-то там есть...
 	if err != nil {
-		a.logger.Error(fmt.Errorf("error read body: %w", err))
+		logger.Error(fmt.Errorf("error read body: %w", err))
 		http.NotFound(w, r)
 		return
 	}
 
 	short, err := a.getAndWriteShort(string(body), w, r)
 	if err != nil {
-		a.logger.Warn(err.Error())
+		logger.Warn(err.Error())
 		http.NotFound(w, r)
 		return
 	}
@@ -79,7 +81,7 @@ func (a *Application) createAPIShorten(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close() // Очищаем тело
 
 	if ok, err := checkContentType("application/json", r); !ok {
-		a.logger.Warn(err.Error())
+		logger.Warn(err.Error())
 		http.NotFound(w, r)
 		return
 	}
@@ -88,14 +90,14 @@ func (a *Application) createAPIShorten(w http.ResponseWriter, r *http.Request) {
 	var request model.RequestShorten
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
-		a.logger.Warn("wrong body",
+		logger.Warn("wrong body",
 			"error", err)
 		http.NotFound(w, r)
 		return
 	}
 
 	if ok, err := request.IsValid(); !ok {
-		a.logger.Warn("request is not valid",
+		logger.Warn("request is not valid",
 			"error", err)
 		http.NotFound(w, r)
 		return
@@ -105,7 +107,7 @@ func (a *Application) createAPIShorten(w http.ResponseWriter, r *http.Request) {
 	var response model.ResponseShorten
 	response.Result, err = a.getAndWriteShort(request.URL, w, r)
 	if err != nil {
-		a.logger.Warn(err.Error())
+		logger.Warn(err.Error())
 		http.NotFound(w, r)
 		return
 	}
@@ -114,7 +116,7 @@ func (a *Application) createAPIShorten(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		a.logger.Error(fmt.Errorf("error encoding responce: %w", err))
+		logger.Error(fmt.Errorf("error encoding responce: %w", err))
 		http.NotFound(w, r)
 		return
 	}
@@ -141,10 +143,9 @@ func (a *Application) getAndWriteShort(addr string, w http.ResponseWriter, r *ht
 	}
 
 	// запись в файловое хранилище
-	if err := a.fileStorage.Append(addr, short); err != nil {
+	if err := a.store.Set(addr, short); err != nil {
 		return "", err
 	}
 
-	a.store.Set(addr, short)
 	return a.baseURL + short, nil
 }

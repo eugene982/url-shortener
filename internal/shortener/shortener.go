@@ -5,9 +5,12 @@ package shortener
 
 import (
 	"hash/crc64"
-
-	"github.com/eugene982/url-shortener/internal/app"
 )
+
+// Сокращатель ссылок
+type Shortener interface {
+	Short(string) string
+}
 
 type SimpleShortener struct {
 	symTab  []byte       // символы для хеша
@@ -16,7 +19,7 @@ type SimpleShortener struct {
 }
 
 // Утверждение типа, ошибка компиляции
-var _ app.Shortener = (*SimpleShortener)(nil)
+var _ Shortener = (*SimpleShortener)(nil)
 
 // Функция-конструктор
 func NewSimpleShortener() *SimpleShortener {

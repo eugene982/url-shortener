@@ -23,7 +23,10 @@ func TestGetAddr(t *testing.T) {
 		{"ya.ru", "t2"},
 	}
 
-	storage := NewMemstore()
+	storage, err := NewMemstore("")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	for _, c := range cases {
 

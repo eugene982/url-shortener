@@ -5,56 +5,18 @@ package app
 import (
 	"bytes"
 	"compress/gzip"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/eugene982/url-shortener/internal/middleware"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // простое хранилище
-type mokStore struct {
-	getAddrFunc func(string) (string, bool)
-	setFunc     func(string, string)
-}
-
-func (m mokStore) GetAddr(s string) (string, bool) { return m.getAddrFunc(s) }
-func (m mokStore) Set(s1 string, s2 string)        { m.setFunc(s1, s2) }
-
-// простой сокращатель
-type mokShorter func(string) string
-
-func (m mokShorter) Short(s string) string { return m(s) }
-
-// простой логгер
-type mokLogger struct{}
-
-func (*mokLogger) Debug(msg string, a ...any) { fmt.Println(msg, a) }
-func (*mokLogger) Info(msg string, a ...any)  { fmt.Println(msg, a) }
-func (*mokLogger) Warn(msg string, a ...any)  { fmt.Println(msg, a) }
-func (*mokLogger) Error(err error, a ...any)  { fmt.Println(err, a) }
-
-// Тесты
-
-func newTestApp(t *testing.T) *Application {
-	st := mokStore{
-		getAddrFunc: func(addr string) (string, bool) { return addr, addr != "" },
-		setFunc:     func(s1, s2 string) {},
-	}
-	sh := mokShorter(func(addr string) string { return addr })
-	logger := &mokLogger{}
-
-	a, err := NewApplication(sh, st, logger, "", "")
-	require.NotNil(t, a)
-	require.NoError(t, err)
-
-	return a
-}
-
 func TestRouterMethods(t *testing.T) {
 
 	type want struct {
@@ -295,7 +257,7 @@ func TestGzipCompression(t *testing.T) {
 	app := newTestApp(t)
 	defer app.Close()
 
-	handler := http.Handler(app.gzipMiddleware(http.HandlerFunc(app.createAPIShorten)))
+	handler := http.Handler(middleware.Gzip(http.HandlerFunc(app.createAPIShorten)))
 
 	srv := httptest.NewServer(handler)
 	defer srv.Close()

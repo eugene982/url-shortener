@@ -3,7 +3,7 @@ package config
 import (
 	"flag"
 
-	"github.com/caarlos0/env"
+	"github.com/caarlos0/env/v8"
 )
 
 // Объявление структуры конфигурации
@@ -27,24 +27,7 @@ func init() {
 
 	// получаем конфигурацию из флагов и/или окружения
 	flag.Parse()
-
-	var envConf Configuration
-
-	err := env.Parse(&envConf)
-	if err == nil {
-		if envConf.ServAddr != "" {
-			config.ServAddr = envConf.ServAddr
-		}
-		if envConf.BaseURL != "" {
-			config.BaseURL = envConf.BaseURL
-		}
-		if envConf.LogLevel != "" {
-			config.LogLevel = envConf.LogLevel
-		}
-		if envConf.FileStoragePeth != "" {
-			config.FileStoragePeth = envConf.FileStoragePeth
-		}
-	}
+	env.Parse(&config)
 }
 
 // Возвращаем копию конфигурации полученную из флагов и окружения
