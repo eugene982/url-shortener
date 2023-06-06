@@ -10,6 +10,9 @@ import (
 	"github.com/eugene982/url-shortener/internal/config"
 	"github.com/eugene982/url-shortener/internal/shortener"
 	"github.com/eugene982/url-shortener/internal/storage"
+
+	"github.com/eugene982/url-shortener/internal/logger"
+	"github.com/eugene982/url-shortener/internal/logger/zaplogger"
 )
 
 func main() {
@@ -23,11 +26,25 @@ func main() {
 // Установка параметров сервера и его запуск
 func run() error {
 
-	sh := shortener.NewSimpleShortener()
-	st := storage.NewMemstore()
-
 	conf := config.Config()
-	application := app.NewApplication(sh, st, conf.BaseURL)
+
+	err := zaplogger.Initialize(conf.LogLevel)
+	if err != nil {
+		return err
+	}
+
+	store, err := storage.NewMemstore(conf.FileStoragePeth)
+	if err != nil {
+		return err
+	}
+
+	sh := shortener.NewSimpleShortener()
+
+	application, err := app.NewApplication(sh, store, conf.BaseURL)
+	if err != nil {
+		return err
+	}
+	defer application.Close()
 
 	// Установим таймауты, вдруг соединение будет нестабильным
 	s := &http.Server{
@@ -37,7 +54,13 @@ func run() error {
 		Handler:      application.NewRouter(),
 	}
 
-	log.Println("service start on address:", conf.ServAddr)
+	logger.Info("service start",
+		"addres", conf.ServAddr,
+		"base_url", conf.BaseURL,
+	)
 
-	return s.ListenAndServe()
+	err = s.ListenAndServe()
+	logger.Info("service stop",
+		"error", err)
+	return err
 }

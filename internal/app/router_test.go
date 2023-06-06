@@ -3,50 +3,20 @@
 package app
 
 import (
+	"bytes"
+	"compress/gzip"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/eugene982/url-shortener/internal/middleware"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // простое хранилище
-type mokStore struct {
-	getAddrFunc func(string) (string, bool)
-	setFunc     func(string, string)
-}
-
-func (m mokStore) GetAddr(s string) (string, bool) { return m.getAddrFunc(s) }
-func (m mokStore) Set(s1 string, s2 string)        { m.setFunc(s1, s2) }
-
-// простой сокращатель
-type mokShorter func(string) string
-
-func (m mokShorter) Short(s string) string { return m(s) }
-
-func newTestApp(t *testing.T) *Application {
-	st := mokStore{
-		getAddrFunc: func(addr string) (string, bool) { return addr, addr != "" },
-		setFunc:     func(s1, s2 string) {},
-	}
-	sh := mokShorter(func(addr string) string { return addr })
-
-	a := NewApplication(sh, st, "")
-	require.NotNil(t, a)
-
-	return a
-}
-
-func newTestServer(t *testing.T) *httptest.Server {
-	app := newTestApp(t)
-	ts := httptest.NewServer(app.NewRouter())
-	app.baseURL = ts.URL + "/"
-	return ts
-}
-
 func TestRouterMethods(t *testing.T) {
 
 	type want struct {
@@ -70,7 +40,9 @@ func TestRouterMethods(t *testing.T) {
 		{method: http.MethodTrace, want: want404},
 	}
 
-	router := newTestApp(t).NewRouter()
+	app := newTestApp(t)
+	defer app.Close()
+	router := app.NewRouter()
 
 	for _, tt := range tests {
 		t.Run(tt.method, func(t *testing.T) {
@@ -110,7 +82,10 @@ func TestRouterFindAddr(t *testing.T) {
 		// ...
 	}
 
-	router := newTestApp(t).NewRouter()
+	app := newTestApp(t)
+	defer app.Close()
+
+	router := app.NewRouter()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -173,7 +148,11 @@ func TestRouterCreateAddr(t *testing.T) {
 		// ...
 	}
 
-	ts := newTestServer(t)
+	app := newTestApp(t)
+	defer app.Close()
+
+	ts := httptest.NewServer(app.NewRouter())
+	app.baseURL = ts.URL + "/"
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -194,4 +173,148 @@ func TestRouterCreateAddr(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRouterCreateApiShorten(t *testing.T) {
+
+	type want struct {
+		code     int
+		response string
+	}
+	type req struct {
+		body        string
+		contentType string
+	}
+
+	tests := []struct {
+		name string
+		req  req
+		want want
+	}{
+		{
+			name: "request empty",
+			req:  req{"", ""},
+			want: want{404, "404 page not found\n"},
+		},
+		{
+			name: "request empy json",
+			req:  req{`{"url":""}`, "application/json"},
+			want: want{404, "404 page not found\n"},
+		},
+		{
+			name: "request not json",
+			req:  req{`{"url":"ya.ru"}`, "text/plain"},
+			want: want{404, "404 page not found\n"},
+		},
+		{
+			name: "request uri ya.ru",
+			req:  req{`{"url":"ya.ru"}`, "application/json"},
+			want: want{201, `{"result":"/ya.ru"}`},
+		},
+		{
+			name: "request uri yandex.ru",
+			req:  req{`{"url":"yandex.ru"}`, "application/json;charset=utf-8"},
+			want: want{201, `{"result":"/yandex.ru"}`},
+		},
+		// ...
+	}
+
+	app := newTestApp(t)
+	defer app.Close()
+
+	router := app.NewRouter()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			r := httptest.NewRequest("POST", "/api/shorten", strings.NewReader(tt.req.body))
+			r.Header.Set("Content-Type", tt.req.contentType)
+			w := httptest.NewRecorder()
+
+			router.ServeHTTP(w, r)
+			resp := w.Result()
+			defer resp.Body.Close()
+			//
+			assert.Equal(t, tt.want.code, resp.StatusCode)
+			if tt.want.code == 201 {
+				assert.Contains(t, resp.Header.Get("Content-Type"), "application/json")
+			}
+
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+
+			if tt.want.code == 201 {
+				assert.JSONEq(t, tt.want.response, string(body))
+			} else {
+				assert.Equal(t, tt.want.response, string(body))
+			}
+
+		})
+	}
+}
+
+func TestGzipCompression(t *testing.T) {
+	app := newTestApp(t)
+	defer app.Close()
+
+	handler := http.Handler(middleware.Gzip(http.HandlerFunc(app.createAPIShorten)))
+
+	srv := httptest.NewServer(handler)
+	defer srv.Close()
+
+	// тело запроса
+	requestBody := `{
+        "url": "https://www.yandex.ru"
+    }`
+
+	// ожидаемое содержимое тела ответа при успешном запросе
+	successBody := `{
+    	"result": "/https://www.yandex.ru"
+	}`
+
+	t.Run("sends_gzip", func(t *testing.T) {
+		buf := bytes.NewBuffer(nil)
+		zb := gzip.NewWriter(buf)
+		_, err := zb.Write([]byte(requestBody))
+		require.NoError(t, err)
+		err = zb.Close()
+		require.NoError(t, err)
+
+		r := httptest.NewRequest("POST", srv.URL, buf)
+		r.RequestURI = ""
+		r.Header.Set("Content-Type", "application/json")
+		r.Header.Set("Content-Encoding", "gzip")
+
+		resp, err := http.DefaultClient.Do(r)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusCreated, resp.StatusCode)
+
+		defer resp.Body.Close()
+
+		b, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		require.JSONEq(t, successBody, string(b))
+	})
+
+	t.Run("accepts_gzip", func(t *testing.T) {
+		buf := bytes.NewBufferString(requestBody)
+		r := httptest.NewRequest("POST", srv.URL, buf)
+		r.RequestURI = ""
+		r.Header.Set("Content-Type", "application/json")
+		r.Header.Set("Accept-Encoding", "gzip")
+
+		resp, err := http.DefaultClient.Do(r)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusCreated, resp.StatusCode)
+
+		defer resp.Body.Close()
+
+		zr, err := gzip.NewReader(resp.Body)
+		require.NoError(t, err)
+
+		b, err := io.ReadAll(zr)
+		require.NoError(t, err)
+
+		require.JSONEq(t, successBody, string(b))
+	})
 }
