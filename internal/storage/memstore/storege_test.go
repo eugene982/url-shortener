@@ -1,8 +1,9 @@
 // Тестирование хранилища
 
-package storage
+package memstore
 
 import (
+	"context"
 	"testing"
 )
 
@@ -23,19 +24,26 @@ func TestGetAddr(t *testing.T) {
 		{"ya.ru", "t2"},
 	}
 
-	storage, err := NewMemstore("")
+	storage, err := New("")
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	ctx := context.Background()
+
 	for _, c := range cases {
 
-		storage.Set(c.addr, c.short)
+		storage.Set(ctx, c.addr, c.short)
 
-		if get, ok := storage.GetAddr(c.short); !ok || c.addr != get {
+		get, err := storage.GetAddr(ctx, c.short)
+		if err != nil {
+			t.Error(err)
+			continue
+		}
+
+		if c.addr != get {
 			t.Errorf("error get addr: short: %s, get %s, want %s",
 				c.short, get, c.addr)
-			continue
 		}
 	}
 }

@@ -3,6 +3,7 @@ package app
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 	"github.com/eugene982/url-shortener/internal/logger"
 	"github.com/eugene982/url-shortener/internal/middleware"
 	"github.com/eugene982/url-shortener/internal/model"
+	"github.com/eugene982/url-shortener/internal/storage"
 )
 
 // Возвращает роутер
@@ -23,7 +25,9 @@ func (a *Application) NewRouter() http.Handler {
 	r.Use(middleware.Log)  // прослойка логирования
 	r.Use(middleware.Gzip) // прослойка сжатия
 
+	r.Get("/ping", a.pingHandler)
 	r.Get("/{short}", a.findAddr)
+
 	r.Post("/", a.createShort)
 	r.Post("/api/shorten", a.createAPIShorten)
 
@@ -41,10 +45,13 @@ func (a *Application) NewRouter() http.Handler {
 func (a *Application) findAddr(w http.ResponseWriter, r *http.Request) {
 
 	short := chi.URLParam(r, "short")
-	addr, ok := a.store.GetAddr(short)
-	if !ok {
-		logger.Warn("not found",
-			"short", short)
+	addr, err := a.store.GetAddr(r.Context(), short)
+	if err != nil {
+		if errors.Is(storage.ErrAddressNotFound, err) {
+			logger.Info(err.Error(), "short", short)
+		} else {
+			logger.Error(err, "short", short)
+		}
 		http.NotFound(w, r)
 		return
 	}
@@ -107,7 +114,7 @@ func (a *Application) createAPIShorten(w http.ResponseWriter, r *http.Request) {
 	var response model.ResponseShorten
 	response.Result, err = a.getAndWriteShort(request.URL, w, r)
 	if err != nil {
-		logger.Warn(err.Error())
+		logger.Error(err)
 		http.NotFound(w, r)
 		return
 	}
@@ -120,6 +127,18 @@ func (a *Application) createAPIShorten(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+}
+
+// Проверка соединения
+func (a *Application) pingHandler(w http.ResponseWriter, r *http.Request) {
+	err := a.store.Ping(r.Context())
+	if err != nil {
+		logger.Error(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprint(w, "pong")
 }
 
 // проверка заголовка на формат
@@ -143,7 +162,7 @@ func (a *Application) getAndWriteShort(addr string, w http.ResponseWriter, r *ht
 	}
 
 	// запись в файловое хранилище
-	if err := a.store.Set(addr, short); err != nil {
+	if err := a.store.Set(r.Context(), addr, short); err != nil {
 		return "", err
 	}
 

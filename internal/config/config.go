@@ -12,7 +12,8 @@ type Configuration struct {
 	BaseURL         string `env:"BASE_URL"`       // базовый адрес
 	Timeout         int
 	LogLevel        string `env:"LOG_LEVEL"` // уровень логирования
-	FileStoragePeth string `env:"FILE_STORAGE_PATH"`
+	FileStoragePath string `env:"FILE_STORAGE_PATH"`
+	DatabaseDSN     string `env:"DATABASE_DSN"`
 }
 
 var config Configuration
@@ -23,7 +24,8 @@ func init() {
 	flag.StringVar(&config.BaseURL, "b", "http://localhost:8080", "base address")
 	flag.IntVar(&config.Timeout, "t", 30, "timeout in seconds")
 	flag.StringVar(&config.LogLevel, "l", "info", "log level")
-	flag.StringVar(&config.FileStoragePeth, "f", "/tmp/short-url-db.json", "file storage path")
+	flag.StringVar(&config.FileStoragePath, "f", "/tmp/short-url-db.json", "file storage path")
+	flag.StringVar(&config.DatabaseDSN, "d", "", "postgres connection string")
 
 	// получаем конфигурацию из флагов и/или окружения
 	flag.Parse()
