@@ -48,10 +48,12 @@ func (p *PgxStore) Close() error {
 	return p.db.Close()
 }
 
+// Пинг к базе
 func (p *PgxStore) Ping(ctx context.Context) error {
 	return p.db.PingContext(ctx)
 }
 
+// Запрос полного адреса у базы по короткой ссылке
 func (p *PgxStore) GetAddr(ctx context.Context, short string) (addr string, err error) {
 	query := `SELECT addr FROM address WHERE short=$1`
 
@@ -62,6 +64,7 @@ func (p *PgxStore) GetAddr(ctx context.Context, short string) (addr string, err 
 	return addr, err
 }
 
+// Записть в базу соответствия между адресом и короткой ссылкой
 func (p *PgxStore) Set(ctx context.Context, addr string, short string) error {
 	var query string
 
@@ -81,7 +84,8 @@ func (p *PgxStore) Set(ctx context.Context, addr string, short string) error {
 // При первом запуске база может быть пустая
 func createTable(db *sql.DB) error {
 
-	query := `CREATE TABLE IF NOT EXISTS address (
+	query :=
+		`CREATE TABLE IF NOT EXISTS address (
 		short VARCHAR (20) PRIMARY KEY,
 		addr TEXT NOT NULL
 	)`
