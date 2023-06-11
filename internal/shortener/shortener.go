@@ -4,12 +4,13 @@
 package shortener
 
 import (
+	"fmt"
 	"hash/crc64"
 )
 
 // Сокращатель ссылок
 type Shortener interface {
-	Short(string) string
+	Short(string) (string, error)
 }
 
 type SimpleShortener struct {
@@ -46,9 +47,13 @@ func NewSimpleShortener() *SimpleShortener {
 }
 
 // Будем сохкращать строку до 10 символов
-func (s *SimpleShortener) Short(addr string) string {
+func (s *SimpleShortener) Short(addr string) (short string, err error) {
 	sum := crc64.Checksum([]byte(addr), s.crcTab)
-	return s.toString(sum)
+	short = s.toString(sum)
+	if short == "" {
+		err = fmt.Errorf("cannot generate short url %s", addr)
+	}
+	return
 }
 
 // Функция преобразует хэш в строку нужной длинны

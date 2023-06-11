@@ -89,15 +89,21 @@ func (m *MemStore) GetAddr(ctx context.Context, short string) (addr string, err 
 }
 
 // Установка соответствия между адресом и короткой ссылкой
-func (m *MemStore) Set(ctx context.Context, addr, short string) error {
+func (m *MemStore) Set(ctx context.Context, data ...model.StoreData) error {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
 	default:
 	}
 
-	m.addrList[short] = addr
-	return m.fs.Append(addr, short)
+	if err := m.fs.Append(data...); err != nil {
+		return err
+	}
+
+	for _, d := range data {
+		m.addrList[d.ShortURL] = d.OriginalURL
+	}
+	return nil
 }
 
 // Временное хранилище адресов на диске
@@ -131,15 +137,15 @@ func (fs *fileStorage) Close() error {
 }
 
 // чтение всех ранее сохраненных данных
-func (fs *fileStorage) ReadAll() ([]model.FileStoreData, error) {
+func (fs *fileStorage) ReadAll() ([]model.StoreData, error) {
 	if fs == nil {
 		return nil, nil
 	}
 
-	res := make([]model.FileStoreData, 0, 8)
+	res := make([]model.StoreData, 0, 8)
 	scanner := bufio.NewScanner(fs.file)
 
-	var data model.FileStoreData
+	var data model.StoreData
 	for scanner.Scan() {
 		if err := scanner.Err(); err != nil {
 			return nil, err
@@ -155,21 +161,21 @@ func (fs *fileStorage) ReadAll() ([]model.FileStoreData, error) {
 }
 
 // Добавление новых данных
-func (fs *fileStorage) Append(originalURL, shortURL string) error {
+func (fs *fileStorage) Append(data ...model.StoreData) error {
 	if fs == nil {
 		return nil
 	}
-	fs.counter++
 
-	data := model.FileStoreData{
-		ID:          strconv.Itoa(fs.counter),
-		OriginalURL: originalURL,
-		ShortURL:    shortURL,
-	}
+	for _, d := range data {
+		fs.counter++
 
-	err := json.NewEncoder(fs.writer).Encode(&data)
-	if err != nil {
-		return err
+		if d.ID == "" {
+			d.ID = strconv.Itoa(fs.counter)
+		}
+		err := json.NewEncoder(fs.writer).Encode(&d)
+		if err != nil {
+			return err
+		}
 	}
 	return fs.writer.Flush()
 }

@@ -40,8 +40,10 @@ func run() error {
 
 	if conf.DatabaseDSN != "" {
 		store, err = pgxstore.New(conf.DatabaseDSN)
+		logger.Info("new pgxstore", "dsn", conf.DatabaseDSN)
 	} else {
 		store, err = memstore.New(conf.FileStoragePath)
+		logger.Info("new memstore", "file", conf.FileStoragePath)
 	}
 
 	if err != nil {

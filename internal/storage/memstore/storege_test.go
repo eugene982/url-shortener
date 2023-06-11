@@ -5,6 +5,8 @@ package memstore
 import (
 	"context"
 	"testing"
+
+	"github.com/eugene982/url-shortener/internal/model"
 )
 
 func TestGetAddr(t *testing.T) {
@@ -32,8 +34,10 @@ func TestGetAddr(t *testing.T) {
 	ctx := context.Background()
 
 	for _, c := range cases {
-
-		storage.Set(ctx, c.addr, c.short)
+		storage.Set(ctx, model.StoreData{
+			OriginalURL: c.addr,
+			ShortURL:    c.short,
+		})
 
 		get, err := storage.GetAddr(ctx, c.short)
 		if err != nil {

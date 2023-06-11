@@ -25,11 +25,12 @@ func (a *Application) NewRouter() http.Handler {
 	r.Use(middleware.Log)  // прослойка логирования
 	r.Use(middleware.Gzip) // прослойка сжатия
 
-	r.Get("/ping", a.pingHandler)
-	r.Get("/{short}", a.findAddr)
+	r.Get("/ping", a.handlerPing)
+	r.Get("/{short}", a.handlerFindAddr)
 
-	r.Post("/", a.createShort)
-	r.Post("/api/shorten", a.createAPIShorten)
+	r.Post("/", a.handlerCreateShort)
+	r.Post("/api/shorten", a.handlerAPIShorten)
+	r.Post("/api/shorten/batch", a.handlerAPIBatch)
 
 	// во всех остальных случаях 404
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
@@ -42,7 +43,7 @@ func (a *Application) NewRouter() http.Handler {
 }
 
 // Получение полного адреса по короткой ссылке
-func (a *Application) findAddr(w http.ResponseWriter, r *http.Request) {
+func (a *Application) handlerFindAddr(w http.ResponseWriter, r *http.Request) {
 
 	short := chi.URLParam(r, "short")
 	addr, err := a.store.GetAddr(r.Context(), short)
@@ -61,7 +62,7 @@ func (a *Application) findAddr(w http.ResponseWriter, r *http.Request) {
 }
 
 // Генерирование короткой ссылки и сохранеине её во временном хранилище
-func (a *Application) createShort(w http.ResponseWriter, r *http.Request) {
+func (a *Application) handlerCreateShort(w http.ResponseWriter, r *http.Request) {
 
 	body, err := io.ReadAll(r.Body)
 	defer r.Body.Close() // Вроде как надо закрывать если что-то там есть...
@@ -84,7 +85,7 @@ func (a *Application) createShort(w http.ResponseWriter, r *http.Request) {
 
 // Генерирование короткой ссылки и сохранеине её во временном хранилище
 // из запроса формата JSON
-func (a *Application) createAPIShorten(w http.ResponseWriter, r *http.Request) {
+func (a *Application) handlerAPIShorten(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close() // Очищаем тело
 
 	if ok, err := checkContentType("application/json", r); !ok {
@@ -129,8 +130,77 @@ func (a *Application) createAPIShorten(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Генерирование короткой ссылки и сохранеине её во временном хранилище
+// из запроса формата JSON
+func (a *Application) handlerAPIBatch(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close() // Очищаем тело
+
+	if ok, err := checkContentType("application/json", r); !ok {
+		logger.Warn(err.Error())
+		http.NotFound(w, r)
+		return
+	}
+
+	request := make([]model.BatchRequest, 0, 8)   // сюда прочитаем запрос
+	response := make([]model.BatchResponse, 0, 8) // подготовка ответа
+	write := make([]model.StoreData, 0, 8)        // это положим в хранилище
+
+	// получаем тело ответа и проверяем его
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		logger.Warn("wrong body",
+			"error", err)
+		http.NotFound(w, r)
+		return
+	}
+
+	for _, batch := range request {
+
+		if ok, err := batch.IsValid(); !ok {
+			logger.Warn("request is not valid",
+				"error", err)
+			http.NotFound(w, r)
+			return
+		}
+
+		short, err := a.shortener.Short(batch.OriginalURL)
+		if err != nil {
+			logger.Warn("error get short url",
+				"error", err)
+			http.NotFound(w, r)
+			return
+		}
+
+		response = append(response, model.BatchResponse{
+			CorrelationID: batch.CorrelationID,
+			ShortURL:      a.baseURL + short,
+		})
+
+		write = append(write, model.StoreData{
+			ID:          batch.CorrelationID,
+			ShortURL:    short,
+			OriginalURL: batch.OriginalURL,
+		})
+	}
+
+	if err = a.store.Set(r.Context(), write...); err != nil {
+		logger.Error(fmt.Errorf("error write data in storage: %w", err))
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logger.Error(fmt.Errorf("error encoding responce: %w", err))
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
 // Проверка соединения
-func (a *Application) pingHandler(w http.ResponseWriter, r *http.Request) {
+func (a *Application) handlerPing(w http.ResponseWriter, r *http.Request) {
 	err := a.store.Ping(r.Context())
 	if err != nil {
 		logger.Error(err)
@@ -156,13 +226,17 @@ func (a *Application) getAndWriteShort(addr string, w http.ResponseWriter, r *ht
 		return "", fmt.Errorf("address is empty")
 	}
 
-	short := a.shortener.Short(addr)
-	if short == "" {
-		return "", fmt.Errorf("short url generation error")
+	short, err := a.shortener.Short(addr)
+	if err != nil {
+		return "", err
 	}
 
 	// запись в файловое хранилище
-	if err := a.store.Set(r.Context(), addr, short); err != nil {
+	err = a.store.Set(r.Context(), model.StoreData{
+		OriginalURL: addr,
+		ShortURL:    short,
+	})
+	if err != nil {
 		return "", err
 	}
 

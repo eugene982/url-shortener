@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/eugene982/url-shortener/internal/model"
 	"github.com/eugene982/url-shortener/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -11,24 +12,24 @@ import (
 
 type mokStore struct {
 	getAddrFunc func(string) (string, error)
-	setFunc     func(string, string) error
+	setFunc     func(d ...model.StoreData) error
 }
 
 func (m mokStore) GetAddr(_ context.Context, s string) (string, error) { return m.getAddrFunc(s) }
-func (m mokStore) Set(_ context.Context, s1 string, s2 string) error   { return m.setFunc(s1, s2) }
+func (m mokStore) Set(_ context.Context, d ...model.StoreData) error   { return m.setFunc(d...) }
 func (mokStore) Ping(context.Context) error                            { return nil }
 func (mokStore) Close() error                                          { return nil }
 
 // простой сокращатель
-type mokShorter func(string) string
+type mokShorter func(string) (string, error)
 
-func (m mokShorter) Short(s string) string { return m(s) }
+func (m mokShorter) Short(s string) (string, error) { return m(s) }
 
 // Тесты
 
 func newTestApp(t *testing.T) *Application {
 	st := mokStore{
-		setFunc: func(s1, s2 string) error { return nil },
+		setFunc: func(_ ...model.StoreData) error { return nil },
 		getAddrFunc: func(short string) (addr string, err error) {
 			addr = short
 			if short == "" {
@@ -37,7 +38,7 @@ func newTestApp(t *testing.T) *Application {
 			return
 		},
 	}
-	sh := mokShorter(func(addr string) string { return addr })
+	sh := mokShorter(func(addr string) (string, error) { return addr, nil })
 
 	a, err := NewApplication(sh, st, "")
 	require.NotNil(t, a)
