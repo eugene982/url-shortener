@@ -12,13 +12,16 @@ import (
 
 type mokStore struct {
 	getAddrFunc func(string) (string, error)
-	setFunc     func(d ...model.StoreData) error
+	updFunc     func(d ...model.StoreData) error
 }
 
 func (m mokStore) GetAddr(_ context.Context, s string) (string, error) { return m.getAddrFunc(s) }
-func (m mokStore) Set(_ context.Context, d ...model.StoreData) error   { return m.setFunc(d...) }
-func (mokStore) Ping(context.Context) error                            { return nil }
-func (mokStore) Close() error                                          { return nil }
+func (m mokStore) Set(_ context.Context, addr, short string) error {
+	return m.updFunc(model.StoreData{OriginalURL: addr, ShortURL: short})
+}
+func (m mokStore) Update(_ context.Context, d ...model.StoreData) error { return m.updFunc(d...) }
+func (mokStore) Ping(context.Context) error                             { return nil }
+func (mokStore) Close() error                                           { return nil }
 
 // простой сокращатель
 type mokShorter func(string) (string, error)
@@ -29,7 +32,7 @@ func (m mokShorter) Short(s string) (string, error) { return m(s) }
 
 func newTestApp(t *testing.T) *Application {
 	st := mokStore{
-		setFunc: func(_ ...model.StoreData) error { return nil },
+		updFunc: func(_ ...model.StoreData) error { return nil },
 		getAddrFunc: func(short string) (addr string, err error) {
 			addr = short
 			if short == "" {

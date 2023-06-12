@@ -7,6 +7,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 
@@ -73,8 +75,27 @@ func (p *PgxStore) GetAddr(ctx context.Context, short string) (addr string, err 
 	}
 }
 
+// Установка уникального соответствия
+func (p *PgxStore) Set(ctx context.Context, addr, short string) error {
+	tx, err := p.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	query := `INSERT INTO address (addr, short) VALUES($1, $2)`
+	if _, err = tx.ExecContext(ctx, query, addr, short); err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
+			err = storage.ErrAddressConflict
+		}
+		return err
+	}
+	return tx.Commit()
+}
+
 // Записть в базу соответствия между адресом и короткой ссылкой
-func (p *PgxStore) Set(ctx context.Context, data ...model.StoreData) error {
+func (p *PgxStore) Update(ctx context.Context, data ...model.StoreData) error {
 	tx, err := p.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return err
@@ -119,16 +140,15 @@ func (p *PgxStore) Set(ctx context.Context, data ...model.StoreData) error {
 
 	// Обновляем адреса которые есть в базе и добавляем новые, при отсутствии
 	for _, d := range data {
-		if _, ok := update[d.ShortURL]; ok {
-			query = `UPDATE address SET addr=$1 WHERE short=$2`
-		} else {
+		if _, ok := update[d.ShortURL]; !ok {
 			query = `INSERT INTO address (addr, short) VALUES($1, $2)`
+		} else {
+			query = `UPDATE address SET addr=$1 WHERE short=$2`
 		}
 
 		if _, err = tx.ExecContext(ctx, query, d.OriginalURL, d.ShortURL); err != nil {
 			return err
 		}
-
 	}
 
 	return tx.Commit()
@@ -142,7 +162,9 @@ func createTable(db *sqlx.DB) error {
 			addr TEXT NOT NULL
 		);
 		CREATE UNIQUE INDEX IF NOT EXISTS short_idx 
-		ON address (short);`
+		ON address (short);
+		CREATE UNIQUE INDEX IF NOT EXISTS addr_idx 
+		ON address (addr);`
 	_, err := db.Exec(query)
 	return err
 }

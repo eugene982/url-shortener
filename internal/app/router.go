@@ -72,14 +72,22 @@ func (a *Application) handlerCreateShort(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	short, err := a.getAndWriteShort(string(body), w, r)
-	if err != nil {
-		logger.Warn(err.Error())
+	addr := string(body)
+	short, err := a.getAndWriteShort(addr, w, r)
+	if err == nil {
+		w.WriteHeader(http.StatusCreated)
+
+	} else if errors.Is(err, storage.ErrAddressConflict) {
+		logger.Warn(err.Error(),
+			"url", addr)
+		w.WriteHeader(http.StatusConflict)
+
+	} else {
+		logger.Error(err)
 		http.NotFound(w, r)
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
 	io.WriteString(w, short)
 }
 
@@ -111,16 +119,26 @@ func (a *Application) handlerAPIShorten(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
+
 	//	подготовка ответа
 	var response model.ResponseShorten
 	response.Result, err = a.getAndWriteShort(request.URL, w, r)
-	if err != nil {
+
+	if err == nil {
+		w.WriteHeader(http.StatusCreated)
+
+	} else if errors.Is(err, storage.ErrAddressConflict) {
+		logger.Warn(err.Error(),
+			"url", request.URL)
+		w.WriteHeader(http.StatusConflict)
+
+	} else {
 		logger.Error(err)
 		http.NotFound(w, r)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {
@@ -183,7 +201,7 @@ func (a *Application) handlerAPIBatch(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	if err = a.store.Set(r.Context(), write...); err != nil {
+	if err = a.store.Update(r.Context(), write...); err != nil {
 		logger.Error(fmt.Errorf("error write data in storage: %w", err))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -232,13 +250,6 @@ func (a *Application) getAndWriteShort(addr string, w http.ResponseWriter, r *ht
 	}
 
 	// запись в файловое хранилище
-	err = a.store.Set(r.Context(), model.StoreData{
-		OriginalURL: addr,
-		ShortURL:    short,
-	})
-	if err != nil {
-		return "", err
-	}
-
-	return a.baseURL + short, nil
+	err = a.store.Set(r.Context(), addr, short)
+	return a.baseURL + short, err
 }

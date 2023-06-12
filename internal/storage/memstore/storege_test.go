@@ -9,7 +9,7 @@ import (
 	"github.com/eugene982/url-shortener/internal/model"
 )
 
-func TestGetAddr(t *testing.T) {
+func TestUpdateAddr(t *testing.T) {
 
 	var cases = []struct {
 		addr  string
@@ -34,7 +34,7 @@ func TestGetAddr(t *testing.T) {
 	ctx := context.Background()
 
 	for _, c := range cases {
-		storage.Set(ctx, model.StoreData{
+		storage.Update(ctx, model.StoreData{
 			OriginalURL: c.addr,
 			ShortURL:    c.short,
 		})

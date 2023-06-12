@@ -17,8 +17,9 @@ import (
 
 // Объявление структуры-хранителя
 type MemStore struct {
-	addrList map[string]string
-	fs       *fileStorage // запись во временный файл
+	addrList   map[string]string
+	savingAddr map[string]bool
+	fs         *fileStorage // запись во временный файл
 }
 
 // Утверждение типа, ошибка компиляции
@@ -28,9 +29,10 @@ var _ storage.Storage = (*MemStore)(nil)
 func New(fname string) (*MemStore, error) {
 
 	var (
-		err      error
-		fs       *fileStorage
-		addrList = make(map[string]string)
+		err        error
+		fs         *fileStorage
+		addrList   = make(map[string]string)
+		savingAddr = make(map[string]bool)
 	)
 
 	// хранение ранее созданных сокращений в файле
@@ -47,12 +49,14 @@ func New(fname string) (*MemStore, error) {
 		// переносим все ранее сохранённые значения из файла
 		for _, v := range urls {
 			addrList[v.ShortURL] = v.OriginalURL
+			savingAddr[v.OriginalURL] = true
 		}
 	}
 
 	ms := &MemStore{
-		addrList: addrList,
-		fs:       fs,
+		addrList:   addrList,
+		savingAddr: savingAddr,
+		fs:         fs,
 	}
 	return ms, nil
 }
@@ -88,8 +92,27 @@ func (m *MemStore) GetAddr(ctx context.Context, short string) (addr string, err 
 	return "", storage.ErrAddressNotFound
 }
 
-// Установка соответствия между адресом и короткой ссылкой
-func (m *MemStore) Set(ctx context.Context, data ...model.StoreData) error {
+// Установка уникального соответствия
+func (m *MemStore) Set(ctx context.Context, addr, short string) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
+	// Проверка на налицие сохранённого полного адреса
+	if m.savingAddr[addr] {
+		return storage.ErrAddressConflict
+	}
+
+	return m.Update(ctx, model.StoreData{
+		OriginalURL: addr,
+		ShortURL:    short,
+	})
+}
+
+// Установка/обновление соответствиq между адресом и короткой ссылкой
+func (m *MemStore) Update(ctx context.Context, data ...model.StoreData) error {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -102,6 +125,7 @@ func (m *MemStore) Set(ctx context.Context, data ...model.StoreData) error {
 
 	for _, d := range data {
 		m.addrList[d.ShortURL] = d.OriginalURL
+		m.savingAddr[d.OriginalURL] = true
 	}
 	return nil
 }
