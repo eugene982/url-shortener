@@ -34,6 +34,10 @@ func New(databaseDSN string) (*PgxStore, error) {
 		return nil, err
 	}
 
+	if err = createTableIfNonExists(db); err != nil {
+		return nil, err
+	}
+
 	// Настройка пула соединений
 	db.SetMaxOpenConns(3)
 	db.SetMaxIdleConns(3)
@@ -117,4 +121,17 @@ func (p *PgxStore) Update(ctx context.Context, data []model.StoreData) error {
 	}
 
 	return tx.Commit()
+}
+
+// При первом запуске база может быть пустая
+func createTableIfNonExists(db *sqlx.DB) error {
+	query := `
+		CREATE TABLE IF NOT EXISTS address (
+			short VARCHAR (20) PRIMARY KEY,
+			addr TEXT NOT NULL
+		);
+		CREATE UNIQUE INDEX IF NOT EXISTS addr_idx 
+		ON address (addr);`
+	_, err := db.Exec(query)
+	return err
 }
