@@ -21,5 +21,5 @@ type Storage interface {
 	Ping(context.Context) error
 	GetAddr(ctx context.Context, short string) (addr string, err error)
 	Set(ctx context.Context, addr, short string) error
-	Update(ctx context.Context, data ...model.StoreData) error
+	Update(ctx context.Context, data []model.StoreData) error
 }

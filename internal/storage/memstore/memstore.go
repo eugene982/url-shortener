@@ -105,21 +105,22 @@ func (m *MemStore) Set(ctx context.Context, addr, short string) error {
 		return storage.ErrAddressConflict
 	}
 
-	return m.Update(ctx, model.StoreData{
-		OriginalURL: addr,
-		ShortURL:    short,
-	})
+	data := []model.StoreData{
+		{OriginalURL: addr, ShortURL: short},
+	}
+
+	return m.Update(ctx, data)
 }
 
 // Установка/обновление соответствиq между адресом и короткой ссылкой
-func (m *MemStore) Update(ctx context.Context, data ...model.StoreData) error {
+func (m *MemStore) Update(ctx context.Context, data []model.StoreData) error {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
 	default:
 	}
 
-	if err := m.fs.Append(data...); err != nil {
+	if err := m.fs.Append(data); err != nil {
 		return err
 	}
 
@@ -185,7 +186,7 @@ func (fs *fileStorage) ReadAll() ([]model.StoreData, error) {
 }
 
 // Добавление новых данных
-func (fs *fileStorage) Append(data ...model.StoreData) error {
+func (fs *fileStorage) Append(data []model.StoreData) error {
 	if fs == nil {
 		return nil
 	}

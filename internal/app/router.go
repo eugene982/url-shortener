@@ -134,7 +134,9 @@ func (a *Application) handlerAPIShorten(w http.ResponseWriter, r *http.Request) 
 		w.WriteHeader(http.StatusConflict)
 
 	} else {
-		logger.Error(err)
+		logger.Warn("error write short url",
+			"url", request.URL,
+			"err", err)
 		http.NotFound(w, r)
 		return
 	}
@@ -159,11 +161,8 @@ func (a *Application) handlerAPIBatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	request := make([]model.BatchRequest, 0, 8)   // сюда прочитаем запрос
-	response := make([]model.BatchResponse, 0, 8) // подготовка ответа
-	write := make([]model.StoreData, 0, 8)        // это положим в хранилище
-
 	// получаем тело ответа и проверяем его
+	request := make([]model.BatchRequest, 0) // сюда прочитаем запрос
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
 		logger.Warn("wrong body",
@@ -171,6 +170,9 @@ func (a *Application) handlerAPIBatch(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+
+	response := make([]model.BatchResponse, 0, len(request)) // подготовка ответа
+	write := make([]model.StoreData, 0, len(request))        // это положим в хранилище
 
 	for _, batch := range request {
 
@@ -201,7 +203,7 @@ func (a *Application) handlerAPIBatch(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	if err = a.store.Update(r.Context(), write...); err != nil {
+	if err = a.store.Update(r.Context(), write); err != nil {
 		logger.Error(fmt.Errorf("error write data in storage: %w", err))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

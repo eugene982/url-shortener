@@ -3,7 +3,6 @@ package pgxstore
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"time"
 
@@ -32,10 +31,6 @@ func New(databaseDSN string) (*PgxStore, error) {
 	}
 
 	if err = db.Ping(); err != nil {
-		return nil, err
-	}
-
-	if err = createTable(db); err != nil {
 		return nil, err
 	}
 
@@ -95,76 +90,31 @@ func (p *PgxStore) Set(ctx context.Context, addr, short string) error {
 }
 
 // Записть в базу соответствия между адресом и короткой ссылкой
-func (p *PgxStore) Update(ctx context.Context, data ...model.StoreData) error {
+func (p *PgxStore) Update(ctx context.Context, data []model.StoreData) error {
+	if len(data) == 0 {
+		return nil
+	}
+
 	tx, err := p.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	if len(data) == 0 {
-		return nil
-	}
-
-	shorts := make([]string, len(data)) // массив коротких адресов которые поищем в базе
-	for i, d := range data {
-		shorts[i] = d.ShortURL
-	}
-
-	// Поиск в базе уже установленных адресов по списку
-	query, args, err := sqlx.In(`
-		SELECT addr, short FROM address 
-	 	WHERE short IN(?)`, shorts)
+	stmt, err := tx.PrepareContext(ctx, `
+		INSERT INTO address (addr, short) VALUES($1, $2)
+		ON CONFLICT (short) 
+		DO UPDATE SET addr=$1, short=$2`)
 	if err != nil {
 		return err
-	}
-	rows, err := tx.QueryContext(ctx, tx.Rebind(query), args...)
-	if err != nil {
-		return err
-	}
-
-	update := make(map[string]string) // адреса которые нужно перезаписать
-	for rows.Next() {
-		var short, addr string
-		if err = rows.Scan(&addr, &short); err != nil {
-			if errors.Is(sql.ErrNoRows, err) {
-				continue
-			}
-			return err
-		}
-		update[short] = addr
-	}
-	if rows.Err() != nil {
-		return rows.Err()
 	}
 
 	// Обновляем адреса которые есть в базе и добавляем новые, при отсутствии
 	for _, d := range data {
-		if _, ok := update[d.ShortURL]; !ok {
-			query = `INSERT INTO address (addr, short) VALUES($1, $2)`
-		} else {
-			query = `UPDATE address SET addr=$1 WHERE short=$2`
-		}
-
-		if _, err = tx.ExecContext(ctx, query, d.OriginalURL, d.ShortURL); err != nil {
+		if _, err = stmt.ExecContext(ctx, d.OriginalURL, d.ShortURL); err != nil {
 			return err
 		}
 	}
 
 	return tx.Commit()
-}
-
-// При первом запуске база может быть пустая
-func createTable(db *sqlx.DB) error {
-	query := `
-		CREATE TABLE IF NOT EXISTS address (
-			short VARCHAR (20) PRIMARY KEY,
-			addr TEXT NOT NULL
-		);
-		CREATE UNIQUE INDEX IF NOT EXISTS short_idx 
-		ON address (short);
-		CREATE UNIQUE INDEX IF NOT EXISTS addr_idx 
-		ON address (addr);`
-	_, err := db.Exec(query)
-	return err
 }

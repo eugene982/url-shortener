@@ -34,10 +34,11 @@ func TestUpdateAddr(t *testing.T) {
 	ctx := context.Background()
 
 	for _, c := range cases {
-		storage.Update(ctx, model.StoreData{
-			OriginalURL: c.addr,
-			ShortURL:    c.short,
-		})
+		data := []model.StoreData{
+			{OriginalURL: c.addr, ShortURL: c.short},
+		}
+
+		storage.Update(ctx, data)
 
 		get, err := storage.GetAddr(ctx, c.short)
 		if err != nil {

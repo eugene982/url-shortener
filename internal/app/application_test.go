@@ -19,9 +19,9 @@ func (m mokStore) GetAddr(_ context.Context, s string) (string, error) { return 
 func (m mokStore) Set(_ context.Context, addr, short string) error {
 	return m.updFunc(model.StoreData{OriginalURL: addr, ShortURL: short})
 }
-func (m mokStore) Update(_ context.Context, d ...model.StoreData) error { return m.updFunc(d...) }
-func (mokStore) Ping(context.Context) error                             { return nil }
-func (mokStore) Close() error                                           { return nil }
+func (m mokStore) Update(_ context.Context, d []model.StoreData) error { return m.updFunc(d...) }
+func (mokStore) Ping(context.Context) error                            { return nil }
+func (mokStore) Close() error                                          { return nil }
 
 // простой сокращатель
 type mokShorter func(string) (string, error)
