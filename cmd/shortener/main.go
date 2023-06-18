@@ -9,6 +9,7 @@ import (
 	"github.com/eugene982/url-shortener/internal/app"
 	"github.com/eugene982/url-shortener/internal/config"
 	"github.com/eugene982/url-shortener/internal/shortener"
+	"github.com/jmoiron/sqlx"
 
 	"github.com/eugene982/url-shortener/internal/storage"
 	"github.com/eugene982/url-shortener/internal/storage/memstore"
@@ -39,7 +40,13 @@ func run() error {
 	var store storage.Storage
 
 	if conf.DatabaseDSN != "" {
-		store, err = pgxstore.New(conf.DatabaseDSN)
+		//"postgres://username:password@localhost:5432/database_name"
+		db, err := sqlx.Open("pgx", conf.DatabaseDSN)
+		if err != nil {
+			logger.Error(err)
+			return err
+		}
+		store, err = pgxstore.New(db)
 		logger.Info("new pgxstore", "dsn", conf.DatabaseDSN)
 	} else {
 		store, err = memstore.New(conf.FileStoragePath)

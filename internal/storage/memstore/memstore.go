@@ -17,7 +17,7 @@ import (
 
 // Объявление структуры-хранителя
 type MemStore struct {
-	addrList   map[string]string
+	addrList   map[string]model.StoreData
 	savingAddr map[string]bool
 	fs         *fileStorage // запись во временный файл
 }
@@ -31,7 +31,7 @@ func New(fname string) (*MemStore, error) {
 	var (
 		err        error
 		fs         *fileStorage
-		addrList   = make(map[string]string)
+		addrList   = make(map[string]model.StoreData)
 		savingAddr = make(map[string]bool)
 	)
 
@@ -48,7 +48,10 @@ func New(fname string) (*MemStore, error) {
 		}
 		// переносим все ранее сохранённые значения из файла
 		for _, v := range urls {
-			addrList[v.ShortURL] = v.OriginalURL
+			addrList[v.ShortURL] = model.StoreData{
+				ShortURL:    v.ShortURL,
+				OriginalURL: v.OriginalURL,
+			}
 			savingAddr[v.OriginalURL] = true
 		}
 	}
@@ -87,13 +90,13 @@ func (m *MemStore) GetAddr(ctx context.Context, short string) (addr string, err 
 	}
 
 	if addr, ok := m.addrList[short]; ok {
-		return addr, nil
+		return addr.OriginalURL, nil
 	}
 	return "", storage.ErrAddressNotFound
 }
 
 // Установка уникального соответствия
-func (m *MemStore) Set(ctx context.Context, addr, short string) error {
+func (m *MemStore) Set(ctx context.Context, data model.StoreData) error {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -101,34 +104,49 @@ func (m *MemStore) Set(ctx context.Context, addr, short string) error {
 	}
 
 	// Проверка на налицие сохранённого полного адреса
-	if m.savingAddr[addr] {
+	if m.savingAddr[data.OriginalURL] {
 		return storage.ErrAddressConflict
 	}
 
-	data := []model.StoreData{
-		{OriginalURL: addr, ShortURL: short},
+	if ok, err := data.IsValid(); !ok {
+		return err
 	}
 
-	return m.Update(ctx, data)
+	list := []model.StoreData{
+		data,
+	}
+
+	return m.Update(ctx, list)
 }
 
 // Установка/обновление соответствиq между адресом и короткой ссылкой
-func (m *MemStore) Update(ctx context.Context, data []model.StoreData) error {
+func (m *MemStore) Update(ctx context.Context, list []model.StoreData) error {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
 	default:
 	}
 
-	if err := m.fs.Append(data); err != nil {
+	if err := m.fs.Append(list); err != nil {
 		return err
 	}
 
-	for _, d := range data {
-		m.addrList[d.ShortURL] = d.OriginalURL
+	for _, d := range list {
+		m.addrList[d.ShortURL] = d
 		m.savingAddr[d.OriginalURL] = true
 	}
 	return nil
+}
+
+// Получение данных пользователя
+func (m *MemStore) GetUserURLs(ctx context.Context, userID int64) ([]model.StoreData, error) {
+	res := make([]model.StoreData, 0)
+	for _, v := range m.addrList {
+		if v.UserID == userID {
+			res = append(res, v)
+		}
+	}
+	return res, nil
 }
 
 // Временное хранилище адресов на диске

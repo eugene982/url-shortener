@@ -3,6 +3,7 @@ package pgxstore
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"time"
 
@@ -23,14 +24,9 @@ type PgxStore struct {
 var _ storage.Storage = (*PgxStore)(nil)
 
 // Функция конструктор
-func New(databaseDSN string) (*PgxStore, error) {
-	//"postgres://username:password@localhost:5432/database_name"
-	db, err := sqlx.Open("pgx", databaseDSN)
+func New(db *sqlx.DB) (*PgxStore, error) {
+	err := db.Ping()
 	if err != nil {
-		return nil, err
-	}
-
-	if err = db.Ping(); err != nil {
 		return nil, err
 	}
 
@@ -59,31 +55,31 @@ func (p *PgxStore) Ping(ctx context.Context) error {
 // Запрос полного адреса у базы по короткой ссылке
 func (p *PgxStore) GetAddr(ctx context.Context, short string) (addr string, err error) {
 	query := `
-		SELECT addr FROM address 
-		WHERE short=$1 LIMIT 1`
+		SELECT * FROM address 
+		WHERE short_url=$1 LIMIT 1`
 
-	res := make([]string, 0, 1)
-	if err = p.db.SelectContext(ctx, &res, query, short); err != nil {
+	res := model.StoreData{}
+	if err = p.db.GetContext(ctx, &res, query, short); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", storage.ErrAddressNotFound
+		}
 		return "", err
 	}
-
-	if len(res) == 0 {
-		return "", storage.ErrAddressNotFound
-	} else {
-		return res[0], nil
-	}
+	return res.OriginalURL, nil
 }
 
 // Установка уникального соответствия
-func (p *PgxStore) Set(ctx context.Context, addr, short string) error {
+func (p *PgxStore) Set(ctx context.Context, data model.StoreData) error {
 	tx, err := p.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	query := `INSERT INTO address (addr, short) VALUES($1, $2)`
-	if _, err = tx.ExecContext(ctx, query, addr, short); err != nil {
+	query := `
+		INSERT INTO address (origin_url, short_url, user_id) 
+		VALUES(:origin_url, :short_url, :user_id);`
+	if _, err = tx.NamedExecContext(ctx, query, data); err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
 			err = storage.ErrAddressConflict
@@ -94,8 +90,8 @@ func (p *PgxStore) Set(ctx context.Context, addr, short string) error {
 }
 
 // Записть в базу соответствия между адресом и короткой ссылкой
-func (p *PgxStore) Update(ctx context.Context, data []model.StoreData) error {
-	if len(data) == 0 {
+func (p *PgxStore) Update(ctx context.Context, list []model.StoreData) error {
+	if len(list) == 0 {
 		return nil
 	}
 
@@ -105,17 +101,18 @@ func (p *PgxStore) Update(ctx context.Context, data []model.StoreData) error {
 	}
 	defer tx.Rollback()
 
-	stmt, err := tx.PrepareContext(ctx, `
-		INSERT INTO address (addr, short) VALUES($1, $2)
-		ON CONFLICT (short) 
-		DO UPDATE SET addr=$1, short=$2`)
+	stmt, err := tx.PrepareNamedContext(ctx, `
+		INSERT INTO address (origin_url, short_url, user_id) 
+		VALUES(:origin_url, :short_url, :user_id)
+		ON CONFLICT (short_url) 
+		DO UPDATE SET origin_url=:origin_url, short_url=:short_url, user_id=:user_id;`)
 	if err != nil {
 		return err
 	}
 
 	// Обновляем адреса которые есть в базе и добавляем новые, при отсутствии
-	for _, d := range data {
-		if _, err = stmt.ExecContext(ctx, d.OriginalURL, d.ShortURL); err != nil {
+	for _, d := range list {
+		if _, err = stmt.ExecContext(ctx, d); err != nil {
 			return err
 		}
 	}
@@ -123,15 +120,40 @@ func (p *PgxStore) Update(ctx context.Context, data []model.StoreData) error {
 	return tx.Commit()
 }
 
+// Получение данных пользователя
+func (p *PgxStore) GetUserURLs(ctx context.Context, userID int64) ([]model.StoreData, error) {
+	tx, err := p.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res := make([]model.StoreData, 0)
+
+	query := `
+		SELECT * FROM address 
+		WHERE user_id=$1`
+
+	err = p.db.SelectContext(ctx, &res, query, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, tx.Commit()
+}
+
 // При первом запуске база может быть пустая
 func createTableIfNonExists(db *sqlx.DB) error {
 	query := `
 		CREATE TABLE IF NOT EXISTS address (
-			short VARCHAR (20) PRIMARY KEY,
-			addr TEXT NOT NULL
+			short_url  VARCHAR (20) PRIMARY KEY,
+			origin_url TEXT NOT NULL,
+			user_id    BIGINT
 		);
-		CREATE UNIQUE INDEX IF NOT EXISTS addr_idx 
-		ON address (addr);`
+		CREATE UNIQUE INDEX IF NOT EXISTS origin_url_idx 
+		ON address (origin_url);
+		CREATE INDEX IF NOT EXISTS user_id_idx 
+		ON address (user_id);`
 	_, err := db.Exec(query)
 	return err
 }

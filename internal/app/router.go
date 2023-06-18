@@ -25,8 +25,13 @@ func (a *Application) NewRouter() http.Handler {
 	r.Use(middleware.Log)  // прослойка логирования
 	r.Use(middleware.Gzip) // прослойка сжатия
 
+	// Прослойка авторизации
+	r.Use(middleware.Verifier)
+	r.Use(middleware.Auth)
+
 	r.Get("/ping", a.handlerPing)
 	r.Get("/{short}", a.handlerFindAddr)
+	r.Get("/api/user/urls", a.handlerUserURLs)
 
 	r.Post("/", a.handlerCreateShort)
 	r.Post("/api/shorten", a.handlerAPIShorten)
@@ -171,6 +176,14 @@ func (a *Application) handlerAPIBatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Получаем идентификатор пользователя из контекста
+	userID, err := middleware.GetUserID(r)
+	if err != nil {
+		logger.Error(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	response := make([]model.BatchResponse, 0, len(request)) // подготовка ответа
 	write := make([]model.StoreData, 0, len(request))        // это положим в хранилище
 
@@ -198,6 +211,7 @@ func (a *Application) handlerAPIBatch(w http.ResponseWriter, r *http.Request) {
 
 		write = append(write, model.StoreData{
 			ID:          batch.CorrelationID,
+			UserID:      userID,
 			ShortURL:    short,
 			OriginalURL: batch.OriginalURL,
 		})
@@ -231,6 +245,49 @@ func (a *Application) handlerPing(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "pong")
 }
 
+// Аутентификация
+func (a *Application) handlerUserURLs(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close() // Очищаем тело
+
+	// Получаем идентификатор пользователя из контекста
+	userID, err := middleware.GetUserID(r)
+	if err != nil {
+		logger.Error(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Получаем список ссылок пользователя
+	urls, err := a.store.GetUserURLs(r.Context(), userID)
+	if err != nil {
+		logger.Error(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if len(urls) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	responce := make([]model.UserURLResponse, len(urls))
+	for i, v := range urls {
+		responce[i] = model.UserURLResponse{
+			ShortURL:    a.baseURL + v.ShortURL,
+			OriginalURL: v.OriginalURL,
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	if err := json.NewEncoder(w).Encode(responce); err != nil {
+		logger.Error(fmt.Errorf("error encoding responce: %w", err))
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
 // проверка заголовка на формат
 func checkContentType(value string, r *http.Request) (bool, error) {
 	if strings.Contains(r.Header.Get("Content-Type"), value) {
@@ -242,16 +299,27 @@ func checkContentType(value string, r *http.Request) (bool, error) {
 // ищем или пытаемся создать короткую ссылку
 func (a *Application) getAndWriteShort(addr string, w http.ResponseWriter, r *http.Request) (string, error) {
 
-	if addr == "" {
-		return "", fmt.Errorf("address is empty")
-	}
-
 	short, err := a.shortener.Short(addr)
 	if err != nil {
 		return "", err
 	}
 
+	userID, err := middleware.GetUserID(r)
+	if err != nil {
+		return "", err
+	}
+
+	data := model.StoreData{
+		UserID:      userID,
+		ShortURL:    short,
+		OriginalURL: addr,
+	}
+
+	if ok, err := data.IsValid(); !ok {
+		return "", err
+	}
+
 	// запись в файловое хранилище
-	err = a.store.Set(r.Context(), addr, short)
+	err = a.store.Set(r.Context(), data)
 	return a.baseURL + short, err
 }

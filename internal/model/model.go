@@ -26,8 +26,19 @@ func (req RequestShorten) IsValid() (bool, error) {
 // Данные для хранения в файловом хранилище
 type StoreData struct {
 	ID          string `json:"uuid"`
-	ShortURL    string `json:"short_url"`
-	OriginalURL string `json:"original_url"`
+	UserID      int64  `json:"user_id" db:"user_id"`
+	ShortURL    string `json:"short_url" db:"short_url"`
+	OriginalURL string `json:"original_url" db:"origin_url"`
+}
+
+func (st StoreData) IsValid() (bool, error) {
+	if strings.TrimSpace(st.ShortURL) == "" {
+		return false, fmt.Errorf("short URL is empty")
+	}
+	if strings.TrimSpace(st.OriginalURL) == "" {
+		return false, fmt.Errorf("original URL is empty")
+	}
+	return true, nil
 }
 
 // запрос на добавление POST /api/shorten/batch
@@ -51,4 +62,10 @@ func (br BatchRequest) IsValid() (bool, error) {
 type BatchResponse struct {
 	CorrelationID string `json:"correlation_id"`
 	ShortURL      string `json:"short_url"`
+}
+
+type UserURLResponse struct {
+	UserID      int64
+	OriginalURL string `json:"original_url"`
+	ShortURL    string `json:"short_url"`
 }

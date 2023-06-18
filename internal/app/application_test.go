@@ -11,17 +11,22 @@ import (
 )
 
 type mokStore struct {
-	getAddrFunc func(string) (string, error)
-	updFunc     func(d ...model.StoreData) error
+	getAddrFunc     func(string) (string, error)
+	updFunc         func(d ...model.StoreData) error
+	getUserURLsFunc func() ([]model.StoreData, error)
 }
 
 func (m mokStore) GetAddr(_ context.Context, s string) (string, error) { return m.getAddrFunc(s) }
-func (m mokStore) Set(_ context.Context, addr, short string) error {
-	return m.updFunc(model.StoreData{OriginalURL: addr, ShortURL: short})
+func (m mokStore) Set(_ context.Context, d model.StoreData) error {
+	return m.updFunc(d)
 }
-func (m mokStore) Update(_ context.Context, d []model.StoreData) error { return m.updFunc(d...) }
-func (mokStore) Ping(context.Context) error                            { return nil }
-func (mokStore) Close() error                                          { return nil }
+func (m mokStore) GetUserURLs(_ context.Context, userID int64) ([]model.StoreData, error) {
+	return m.getUserURLsFunc()
+}
+
+func (m mokStore) Update(_ context.Context, ls []model.StoreData) error { return m.updFunc(ls...) }
+func (mokStore) Ping(context.Context) error                             { return nil }
+func (mokStore) Close() error                                           { return nil }
 
 // простой сокращатель
 type mokShorter func(string) (string, error)
@@ -39,6 +44,9 @@ func newTestApp(t *testing.T) *Application {
 				err = storage.ErrAddressNotFound
 			}
 			return
+		},
+		getUserURLsFunc: func() ([]model.StoreData, error) {
+			return []model.StoreData{}, nil
 		},
 	}
 	sh := mokShorter(func(addr string) (string, error) { return addr, nil })
