@@ -28,3 +28,6 @@ bin
 
 #client
 cmd/client
+
+#documentation
+doc/

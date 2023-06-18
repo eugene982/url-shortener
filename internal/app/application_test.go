@@ -1,34 +1,47 @@
 package app
 
 import (
+	"context"
 	"testing"
 
+	"github.com/eugene982/url-shortener/internal/model"
+	"github.com/eugene982/url-shortener/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 type mokStore struct {
-	getAddrFunc func(string) (string, bool)
-	setFunc     func(string, string) error
+	getAddrFunc func(string) (string, error)
+	updFunc     func(d ...model.StoreData) error
 }
 
-func (m mokStore) GetAddr(s string) (string, bool) { return m.getAddrFunc(s) }
-func (m mokStore) Set(s1 string, s2 string) error  { return m.setFunc(s1, s2) }
-func (mokStore) Close() error                      { return nil }
+func (m mokStore) GetAddr(_ context.Context, s string) (string, error) { return m.getAddrFunc(s) }
+func (m mokStore) Set(_ context.Context, addr, short string) error {
+	return m.updFunc(model.StoreData{OriginalURL: addr, ShortURL: short})
+}
+func (m mokStore) Update(_ context.Context, d []model.StoreData) error { return m.updFunc(d...) }
+func (mokStore) Ping(context.Context) error                            { return nil }
+func (mokStore) Close() error                                          { return nil }
 
 // простой сокращатель
-type mokShorter func(string) string
+type mokShorter func(string) (string, error)
 
-func (m mokShorter) Short(s string) string { return m(s) }
+func (m mokShorter) Short(s string) (string, error) { return m(s) }
 
 // Тесты
 
 func newTestApp(t *testing.T) *Application {
 	st := mokStore{
-		getAddrFunc: func(addr string) (string, bool) { return addr, addr != "" },
-		setFunc:     func(s1, s2 string) error { return nil },
+		updFunc: func(_ ...model.StoreData) error { return nil },
+		getAddrFunc: func(short string) (addr string, err error) {
+			addr = short
+			if short == "" {
+				err = storage.ErrAddressNotFound
+			}
+			return
+		},
 	}
-	sh := mokShorter(func(addr string) string { return addr })
+	sh := mokShorter(func(addr string) (string, error) { return addr, nil })
 
 	a, err := NewApplication(sh, st, "")
 	require.NotNil(t, a)

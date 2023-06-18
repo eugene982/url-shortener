@@ -64,7 +64,7 @@ func TestRouterMethods(t *testing.T) {
 	}
 }
 
-func TestRouterFindAddr(t *testing.T) {
+func TestRouterHandlerFindAddr(t *testing.T) {
 
 	type want struct {
 		code     int
@@ -103,7 +103,7 @@ func TestRouterFindAddr(t *testing.T) {
 	}
 }
 
-func TestRouterCreateAddr(t *testing.T) {
+func TestRouterHandlerCreateAddr(t *testing.T) {
 
 	type want struct {
 		code int
@@ -175,7 +175,7 @@ func TestRouterCreateAddr(t *testing.T) {
 	}
 }
 
-func TestRouterCreateApiShorten(t *testing.T) {
+func TestRouterHandlerApiShorten(t *testing.T) {
 
 	type want struct {
 		code     int
@@ -257,7 +257,7 @@ func TestGzipCompression(t *testing.T) {
 	app := newTestApp(t)
 	defer app.Close()
 
-	handler := http.Handler(middleware.Gzip(http.HandlerFunc(app.createAPIShorten)))
+	handler := http.Handler(middleware.Gzip(http.HandlerFunc(app.handlerAPIShorten)))
 
 	srv := httptest.NewServer(handler)
 	defer srv.Close()
@@ -317,4 +317,88 @@ func TestGzipCompression(t *testing.T) {
 
 		require.JSONEq(t, successBody, string(b))
 	})
+}
+
+func TestRouterHandlerAPIBatch(t *testing.T) {
+
+	type want struct {
+		code     int
+		response string
+	}
+	type req struct {
+		body        string
+		contentType string
+	}
+
+	tests := []struct {
+		name string
+		req  req
+		want want
+	}{
+		{
+			name: "request empty",
+			req:  req{"", ""},
+			want: want{404, "404 page not found\n"},
+		},
+		{
+			name: "request empy json",
+			req:  req{`{"url":""}`, "application/json"},
+			want: want{404, "404 page not found\n"},
+		},
+		{
+			name: "request not json",
+			req:  req{`[{"correlation_id":"", original_url:""}]`, "text/plain"},
+			want: want{404, "404 page not found\n"},
+		},
+		{
+			name: "request ya.ru",
+			req:  req{`[{"correlation_id":"1", "original_url":"ya.ru"}]`, "application/json"},
+			want: want{201, `[{"correlation_id":"1", "short_url":"/ya.ru"}]`},
+		},
+		{
+			name: "request mail.ru and gmail.com",
+			req: req{`[
+					{"correlation_id":"2", "original_url":"mail.ru"},
+					{"correlation_id":"3", "original_url":"gmail.com"}
+				]`, "application/json"},
+
+			want: want{201, `[
+				{"correlation_id":"2", "short_url":"/mail.ru"},
+				{"correlation_id":"3", "short_url":"/gmail.com"}
+				]`},
+		},
+	}
+
+	app := newTestApp(t)
+	defer app.Close()
+
+	router := app.NewRouter()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			r := httptest.NewRequest("POST", "/api/shorten/batch", strings.NewReader(tt.req.body))
+			r.Header.Set("Content-Type", tt.req.contentType)
+			w := httptest.NewRecorder()
+
+			router.ServeHTTP(w, r)
+			resp := w.Result()
+			defer resp.Body.Close()
+			//
+			assert.Equal(t, tt.want.code, resp.StatusCode)
+			if tt.want.code == 201 {
+				assert.Contains(t, resp.Header.Get("Content-Type"), "application/json")
+			}
+
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+
+			if tt.want.code == 201 {
+				assert.JSONEq(t, tt.want.response, string(body))
+			} else {
+				assert.Equal(t, tt.want.response, string(body))
+			}
+
+		})
+	}
 }

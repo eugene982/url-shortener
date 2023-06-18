@@ -1,12 +1,15 @@
 // Тестирование хранилища
 
-package storage
+package memstore
 
 import (
+	"context"
 	"testing"
+
+	"github.com/eugene982/url-shortener/internal/model"
 )
 
-func TestGetAddr(t *testing.T) {
+func TestUpdateAddr(t *testing.T) {
 
 	var cases = []struct {
 		addr  string
@@ -23,19 +26,29 @@ func TestGetAddr(t *testing.T) {
 		{"ya.ru", "t2"},
 	}
 
-	storage, err := NewMemstore("")
+	storage, err := New("")
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	ctx := context.Background()
+
 	for _, c := range cases {
+		data := []model.StoreData{
+			{OriginalURL: c.addr, ShortURL: c.short},
+		}
 
-		storage.Set(c.addr, c.short)
+		storage.Update(ctx, data)
 
-		if get, ok := storage.GetAddr(c.short); !ok || c.addr != get {
+		get, err := storage.GetAddr(ctx, c.short)
+		if err != nil {
+			t.Error(err)
+			continue
+		}
+
+		if c.addr != get {
 			t.Errorf("error get addr: short: %s, get %s, want %s",
 				c.short, get, c.addr)
-			continue
 		}
 	}
 }

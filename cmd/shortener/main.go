@@ -9,7 +9,10 @@ import (
 	"github.com/eugene982/url-shortener/internal/app"
 	"github.com/eugene982/url-shortener/internal/config"
 	"github.com/eugene982/url-shortener/internal/shortener"
+
 	"github.com/eugene982/url-shortener/internal/storage"
+	"github.com/eugene982/url-shortener/internal/storage/memstore"
+	"github.com/eugene982/url-shortener/internal/storage/pgxstore"
 
 	"github.com/eugene982/url-shortener/internal/logger"
 	"github.com/eugene982/url-shortener/internal/logger/zaplogger"
@@ -33,7 +36,16 @@ func run() error {
 		return err
 	}
 
-	store, err := storage.NewMemstore(conf.FileStoragePeth)
+	var store storage.Storage
+
+	if conf.DatabaseDSN != "" {
+		store, err = pgxstore.New(conf.DatabaseDSN)
+		logger.Info("new pgxstore", "dsn", conf.DatabaseDSN)
+	} else {
+		store, err = memstore.New(conf.FileStoragePath)
+		logger.Info("new memstore", "file", conf.FileStoragePath)
+	}
+
 	if err != nil {
 		return err
 	}
