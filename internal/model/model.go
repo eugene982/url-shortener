@@ -26,9 +26,10 @@ func (req RequestShorten) IsValid() (bool, error) {
 // Данные для хранения в файловом хранилище
 type StoreData struct {
 	ID          string `json:"uuid"`
-	UserID      int64  `json:"user_id" db:"user_id"`
+	UserID      string `json:"user_id" db:"user_id"`
 	ShortURL    string `json:"short_url" db:"short_url"`
 	OriginalURL string `json:"original_url" db:"origin_url"`
+	DeletedFlag bool   `json:"is_deleted" db:"is_deleted"`
 }
 
 func (st StoreData) IsValid() (bool, error) {

@@ -27,7 +27,6 @@ func init() {
 	flag.StringVar(&config.FileStoragePath, "f", "/tmp/short-url-db.json", "file storage path")
 	flag.StringVar(&config.DatabaseDSN, "d", "", "postgres connection string")
 	//flag.StringVar(&config.DatabaseDSN, "d", "postgres://test:test@localhost/url_shorten", "postgres connection string")
-	//flag.StringVar(&config.DatabaseDSN, "d", "postgres://test:test@localhost/url_shortener_test", "postgres connection string")
 
 	// получаем конфигурацию из флагов и/или окружения
 	flag.Parse()

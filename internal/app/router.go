@@ -31,11 +31,13 @@ func (a *Application) NewRouter() http.Handler {
 
 	r.Get("/ping", a.handlerPing)
 	r.Get("/{short}", a.handlerFindAddr)
-	r.Get("/api/user/urls", a.handlerUserURLs)
 
 	r.Post("/", a.handlerCreateShort)
 	r.Post("/api/shorten", a.handlerAPIShorten)
 	r.Post("/api/shorten/batch", a.handlerAPIBatch)
+
+	r.Get("/api/user/urls", a.handlerUserURLs)
+	r.Delete("/api/user/urls", a.handlerDeleteURLs)
 
 	// во всех остальных случаях 404
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
@@ -51,7 +53,7 @@ func (a *Application) NewRouter() http.Handler {
 func (a *Application) handlerFindAddr(w http.ResponseWriter, r *http.Request) {
 
 	short := chi.URLParam(r, "short")
-	addr, err := a.store.GetAddr(r.Context(), short)
+	data, err := a.store.GetAddr(r.Context(), short)
 	if err != nil {
 		if errors.Is(storage.ErrAddressNotFound, err) {
 			logger.Info(err.Error(), "short", short)
@@ -62,7 +64,12 @@ func (a *Application) handlerFindAddr(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Location", addr)
+	if data.DeletedFlag {
+		http.Error(w, "410 Gone", http.StatusGone)
+		return
+	}
+
+	w.Header().Set("Location", data.OriginalURL)
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
@@ -245,7 +252,7 @@ func (a *Application) handlerPing(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "pong")
 }
 
-// Аутентификация
+// Список ссылок пользователя
 func (a *Application) handlerUserURLs(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close() // Очищаем тело
 
@@ -286,6 +293,33 @@ func (a *Application) handlerUserURLs(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+}
+
+// удаление ссылок
+func (a *Application) handlerDeleteURLs(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close() // Очищаем тело
+
+	if ok, err := checkContentType("application/json", r); !ok {
+		logger.Warn(err.Error())
+		http.NotFound(w, r)
+		return
+	}
+
+	// получаем тело ответа и проверяем его
+	request := make([]string, 0) // сюда прочитаем запрос
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		logger.Warn("wrong body",
+			"error", err)
+		http.NotFound(w, r)
+		return
+	}
+
+	for _, short := range request {
+		a.delShortChan <- short
+	}
+
+	w.WriteHeader(http.StatusAccepted)
 }
 
 // проверка заголовка на формат

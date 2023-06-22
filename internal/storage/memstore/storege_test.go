@@ -46,9 +46,8 @@ func TestUpdateAddr(t *testing.T) {
 			continue
 		}
 
-		if c.addr != get {
-			t.Errorf("error get addr: short: %s, get %s, want %s",
-				c.short, get, c.addr)
+		if c.addr != get.OriginalURL || c.short != get.ShortURL {
+			t.Errorf("want: %s, %s; get %#v ", c.short, c.addr, get)
 		}
 	}
 }

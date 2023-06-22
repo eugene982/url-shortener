@@ -37,11 +37,14 @@ func run() error {
 		return err
 	}
 
-	var store storage.Storage
+	var (
+		store storage.Storage
+		db    *sqlx.DB
+	)
 
 	if conf.DatabaseDSN != "" {
 		//"postgres://username:password@localhost:5432/database_name"
-		db, err := sqlx.Open("pgx", conf.DatabaseDSN)
+		db, err = sqlx.Open("pgx", conf.DatabaseDSN)
 		if err != nil {
 			logger.Error(err)
 			return err

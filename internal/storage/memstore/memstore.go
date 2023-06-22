@@ -4,12 +4,8 @@
 package memstore
 
 import (
-	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
-	"os"
-	"strconv"
 
 	"github.com/eugene982/url-shortener/internal/model"
 	"github.com/eugene982/url-shortener/internal/storage"
@@ -82,17 +78,17 @@ func (m *MemStore) Ping(ctx context.Context) (err error) {
 }
 
 // Получение полного адреса по короткой ссылке
-func (m *MemStore) GetAddr(ctx context.Context, short string) (addr string, err error) {
+func (m *MemStore) GetAddr(ctx context.Context, short string) (data model.StoreData, err error) {
 	select {
 	case <-ctx.Done():
-		return "", ctx.Err()
+		return model.StoreData{}, ctx.Err()
 	default:
 	}
 
-	if addr, ok := m.addrList[short]; ok {
-		return addr.OriginalURL, nil
+	if data, ok := m.addrList[short]; ok {
+		return data, nil
 	}
-	return "", storage.ErrAddressNotFound
+	return model.StoreData{}, storage.ErrAddressNotFound
 }
 
 // Установка уникального соответствия
@@ -139,7 +135,13 @@ func (m *MemStore) Update(ctx context.Context, list []model.StoreData) error {
 }
 
 // Получение данных пользователя
-func (m *MemStore) GetUserURLs(ctx context.Context, userID int64) ([]model.StoreData, error) {
+func (m *MemStore) GetUserURLs(ctx context.Context, userID string) ([]model.StoreData, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
 	res := make([]model.StoreData, 0)
 	for _, v := range m.addrList {
 		if v.UserID == userID {
@@ -149,76 +151,21 @@ func (m *MemStore) GetUserURLs(ctx context.Context, userID int64) ([]model.Store
 	return res, nil
 }
 
-// Временное хранилище адресов на диске
-type fileStorage struct {
-	file    *os.File
-	writer  *bufio.Writer // ожидается, что записывать будем чаще чем записывать.
-	counter int
-}
-
-// Создание нового файла хранилища
-func newFileSorage(fname string) (*fileStorage, error) {
-	file, err := os.OpenFile(fname, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		return nil, err
+// Пометка на удаление
+func (m *MemStore) DeleteShort(ctx context.Context, shortURLs []string) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
 	}
 
-	writter := bufio.NewWriter(file)
-
-	return &fileStorage{
-		file:   file,
-		writer: writter,
-	}, nil
-}
-
-// закрытие  файла
-func (fs *fileStorage) Close() error {
-	if fs == nil {
-		return nil
-	}
-	return fs.Close()
-}
-
-// чтение всех ранее сохраненных данных
-func (fs *fileStorage) ReadAll() ([]model.StoreData, error) {
-	if fs == nil {
-		return nil, nil
-	}
-
-	res := make([]model.StoreData, 0, 8)
-	scanner := bufio.NewScanner(fs.file)
-
-	var data model.StoreData
-	for scanner.Scan() {
-		if err := scanner.Err(); err != nil {
-			return nil, err
-		}
-		if err := json.Unmarshal(scanner.Bytes(), &data); err != nil {
-			return nil, err
-		}
-		res = append(res, data)
-	}
-
-	fs.counter = len(res)
-	return res, nil
-}
-
-// Добавление новых данных
-func (fs *fileStorage) Append(data []model.StoreData) error {
-	if fs == nil {
-		return nil
-	}
-
-	for _, d := range data {
-		fs.counter++
-
-		if d.ID == "" {
-			d.ID = strconv.Itoa(fs.counter)
-		}
-		err := json.NewEncoder(fs.writer).Encode(&d)
-		if err != nil {
-			return err
+	for _, short := range shortURLs {
+		data, ok := m.addrList[short]
+		if ok {
+			data.DeletedFlag = true
+			m.addrList[short] = data
 		}
 	}
-	return fs.writer.Flush()
+
+	return nil
 }

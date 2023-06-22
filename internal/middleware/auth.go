@@ -39,16 +39,17 @@ func init() {
 func Auth(next http.Handler) http.Handler {
 
 	fn := func(w http.ResponseWriter, r *http.Request) {
-		var userID int64
+		var userID string
 		ctx := r.Context()
 
 		_, claims, err := jwtauth.FromContext(ctx)
 		// Токен не создат, или истекло время
 		if errors.Is(err, jwtauth.ErrNoTokenFound) || errors.Is(err, jwtauth.ErrExpired) {
-			userID = userRandID.Int63()
+			// пусть пока рандомно выдаётся
+			userID = strconv.FormatInt(userRandID.Int63(), 10)
 
 			_, tokenString, err := tokenAuth.Encode(map[string]interface{}{
-				"user_id": strconv.FormatInt(userID, 10),
+				"user_id": userID,
 			})
 
 			if err != nil {
@@ -64,7 +65,7 @@ func Auth(next http.Handler) http.Handler {
 			})
 
 			ru := r.WithContext(context.WithValue(ctx, contextKeyUserID, userID))
-			logger.Info("generate new user id", "user_id", strconv.FormatInt(userID, 10))
+			logger.Info("generate new user id", "user_id", userID)
 			next.ServeHTTP(w, ru)
 			return
 		}
@@ -84,15 +85,9 @@ func Auth(next http.Handler) http.Handler {
 			return
 		}
 
-		sid, ok := id.(string)
+		userID, ok = id.(string)
 		if !ok {
 			logger.Error(fmt.Errorf("cannot convert to string"), "user_id", id)
-			http.Error(w, "internal server error", http.StatusInternalServerError)
-			return
-		}
-		userID, err = strconv.ParseInt(sid, 10, 0)
-		if err != nil {
-			logger.Error(fmt.Errorf("cannot parse user id string: %w", err))
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return
 		}
@@ -111,14 +106,14 @@ func Verifier(next http.Handler) http.Handler {
 }
 
 // Возвращает идентификатор пользователя из контекста
-func GetUserID(r *http.Request) (int64, error) {
-	userID := r.Context().Value(contextKeyUserID)
-	if userID == nil {
-		return 0, fmt.Errorf("user id not found")
+func GetUserID(r *http.Request) (string, error) {
+	val := r.Context().Value(contextKeyUserID)
+	if val == nil {
+		return "", fmt.Errorf("user id not found")
 	}
-	id, ok := userID.(int64)
+	userID, ok := val.(string)
 	if !ok {
-		return 0, fmt.Errorf("user id is not uint type")
+		return "", fmt.Errorf("user id is not uint type")
 	}
-	return id, nil
+	return userID, nil
 }

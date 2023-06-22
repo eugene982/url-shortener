@@ -53,7 +53,7 @@ func (p *PgxStore) Ping(ctx context.Context) error {
 }
 
 // Запрос полного адреса у базы по короткой ссылке
-func (p *PgxStore) GetAddr(ctx context.Context, short string) (addr string, err error) {
+func (p *PgxStore) GetAddr(ctx context.Context, short string) (data model.StoreData, err error) {
 	query := `
 		SELECT * FROM address 
 		WHERE short_url=$1 LIMIT 1`
@@ -61,11 +61,11 @@ func (p *PgxStore) GetAddr(ctx context.Context, short string) (addr string, err 
 	res := model.StoreData{}
 	if err = p.db.GetContext(ctx, &res, query, short); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return "", storage.ErrAddressNotFound
+			return model.StoreData{}, storage.ErrAddressNotFound
 		}
-		return "", err
+		return model.StoreData{}, err
 	}
-	return res.OriginalURL, nil
+	return res, nil
 }
 
 // Установка уникального соответствия
@@ -77,8 +77,8 @@ func (p *PgxStore) Set(ctx context.Context, data model.StoreData) error {
 	defer tx.Rollback()
 
 	query := `
-		INSERT INTO address (origin_url, short_url, user_id) 
-		VALUES(:origin_url, :short_url, :user_id);`
+		INSERT INTO address (origin_url, short_url, user_id, is_deleted) 
+		VALUES(:origin_url, :short_url, :user_id, :is_deleted);`
 	if _, err = tx.NamedExecContext(ctx, query, data); err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
@@ -102,10 +102,14 @@ func (p *PgxStore) Update(ctx context.Context, list []model.StoreData) error {
 	defer tx.Rollback()
 
 	stmt, err := tx.PrepareNamedContext(ctx, `
-		INSERT INTO address (origin_url, short_url, user_id) 
-		VALUES(:origin_url, :short_url, :user_id)
+		INSERT INTO address 
+			(origin_url, short_url, user_id, is_deleted) 
+		VALUES
+			(:origin_url, :short_url, :user_id, :is_deleted )
 		ON CONFLICT (short_url) 
-		DO UPDATE SET origin_url=:origin_url, short_url=:short_url, user_id=:user_id;`)
+		DO UPDATE SET 
+			origin_url=:origin_url, short_url=:short_url,
+			user_id=:user_id, is_deleted=:is_deleted;`)
 	if err != nil {
 		return err
 	}
@@ -121,7 +125,7 @@ func (p *PgxStore) Update(ctx context.Context, list []model.StoreData) error {
 }
 
 // Получение данных пользователя
-func (p *PgxStore) GetUserURLs(ctx context.Context, userID int64) ([]model.StoreData, error) {
+func (p *PgxStore) GetUserURLs(ctx context.Context, userID string) ([]model.StoreData, error) {
 	tx, err := p.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -142,13 +146,34 @@ func (p *PgxStore) GetUserURLs(ctx context.Context, userID int64) ([]model.Store
 	return res, tx.Commit()
 }
 
+func (p *PgxStore) DeleteShort(ctx context.Context, shortURLs []string) error {
+	tx, err := p.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	query, args, err := sqlx.In(`
+		UPDATE address SET is_deleted=TRUE  
+		WHERE short_url IN (?);`, shortURLs)
+
+	if err != nil {
+		return err
+	}
+	if _, err = tx.ExecContext(ctx, tx.Rebind(query), args...); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
 // При первом запуске база может быть пустая
 func createTableIfNonExists(db *sqlx.DB) error {
 	query := `
 		CREATE TABLE IF NOT EXISTS address (
 			short_url  VARCHAR (20) PRIMARY KEY,
 			origin_url TEXT NOT NULL,
-			user_id    BIGINT
+			user_id    VARCHAR (20) NOT NULL,
+			is_deleted BOOLEAN NOT NULL
 		);
 		CREATE UNIQUE INDEX IF NOT EXISTS origin_url_idx 
 		ON address (origin_url);
