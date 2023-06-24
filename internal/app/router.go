@@ -315,9 +315,15 @@ func (a *Application) handlerDeleteURLs(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	for _, short := range request {
-		a.delShortChan <- short
+	// Получаем идентификатор пользователя из контекста
+	userID, err := middleware.GetUserID(r)
+	if err != nil {
+		logger.Error(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
+
+	a.deleteUserShortAsync(userID, request)
 
 	w.WriteHeader(http.StatusAccepted)
 }

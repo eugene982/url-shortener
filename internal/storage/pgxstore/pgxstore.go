@@ -126,27 +126,26 @@ func (p *PgxStore) Update(ctx context.Context, list []model.StoreData) error {
 
 // Получение данных пользователя
 func (p *PgxStore) GetUserURLs(ctx context.Context, userID string) ([]model.StoreData, error) {
-	tx, err := p.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
 	res := make([]model.StoreData, 0)
 
 	query := `
 		SELECT * FROM address 
 		WHERE user_id=$1`
 
-	err = p.db.SelectContext(ctx, &res, query, userID)
+	err := p.db.SelectContext(ctx, &res, query, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	return res, tx.Commit()
+	return res, nil
 }
 
+// Удаление указанных сокращённых ссылок
 func (p *PgxStore) DeleteShort(ctx context.Context, shortURLs []string) error {
+	if len(shortURLs) == 0 {
+		return nil
+	}
+
 	tx, err := p.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return err
@@ -160,7 +159,7 @@ func (p *PgxStore) DeleteShort(ctx context.Context, shortURLs []string) error {
 	if err != nil {
 		return err
 	}
-	if _, err = tx.ExecContext(ctx, tx.Rebind(query), args...); err != nil {
+	if _, err = tx.ExecContext(ctx, p.db.Rebind(query), args...); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -172,7 +171,7 @@ func createTableIfNonExists(db *sqlx.DB) error {
 		CREATE TABLE IF NOT EXISTS address (
 			short_url  VARCHAR (20) PRIMARY KEY,
 			origin_url TEXT NOT NULL,
-			user_id    VARCHAR (20) NOT NULL,
+			user_id    VARCHAR (36) NOT NULL,
 			is_deleted BOOLEAN NOT NULL
 		);
 		CREATE UNIQUE INDEX IF NOT EXISTS origin_url_idx 
