@@ -257,7 +257,8 @@ func TestGzipCompression(t *testing.T) {
 	app := newTestApp(t)
 	defer app.Close()
 
-	handler := http.Handler(middleware.Gzip(http.HandlerFunc(app.handlerAPIShorten)))
+	handler := http.Handler(middleware.Verifier(middleware.Auth(
+		middleware.Gzip(http.HandlerFunc(app.handlerAPIShorten)))))
 
 	srv := httptest.NewServer(handler)
 	defer srv.Close()
@@ -269,7 +270,7 @@ func TestGzipCompression(t *testing.T) {
 
 	// ожидаемое содержимое тела ответа при успешном запросе
 	successBody := `{
-    	"result": "/https://www.yandex.ru"
+	 	"result": "/https://www.yandex.ru"
 	}`
 
 	t.Run("sends_gzip", func(t *testing.T) {
