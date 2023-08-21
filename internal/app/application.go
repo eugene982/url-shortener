@@ -23,6 +23,7 @@ type Application struct {
 	store        storage.Storage
 	baseURL      string
 	delShortChan chan deleteUserData
+	stopDelChan  chan struct{}
 }
 
 // Функция конструктор приложения.
@@ -40,6 +41,7 @@ func NewApplication(shortener shortener.Shortener,
 		delShortChan: make(chan deleteUserData, delShortChanSize),
 	}
 
+	app.stopDelChan = make(chan struct{})
 	go app.startDeletionShortUrls()
 
 	return app, nil
@@ -47,6 +49,7 @@ func NewApplication(shortener shortener.Shortener,
 
 // закрываем приложение
 func (a *Application) Close() (err error) {
+	a.stopDelChan <- struct{}{}
 	if err = a.store.Close(); err != nil {
 		logger.Error(err)
 	}
@@ -62,6 +65,8 @@ func (a *Application) startDeletionShortUrls() {
 	// копим пачку ссылок
 	for {
 		select {
+		case <-a.stopDelChan:
+			return // завершаем горутину
 		case d := <-a.delShortChan:
 			delete = append(delete, d)
 
@@ -70,7 +75,7 @@ func (a *Application) startDeletionShortUrls() {
 				continue
 			}
 
-			ctx, close := context.WithCancel(context.Background())
+			ctx := context.Background()
 
 			// сгруппируем по пользователю
 			usersURLs := map[string][]string{}
@@ -106,9 +111,12 @@ func (a *Application) startDeletionShortUrls() {
 				continue //
 			}
 			delete = delete[:0] // очищаем при успешном удалении
-			close()
 		}
 	}
+}
+
+func (a *Application) GetBaseURL() string {
+	return a.baseURL
 }
 
 // Структура для складывания в канал пары Пользоватьль - Ссылки
@@ -118,7 +126,7 @@ type deleteUserData struct {
 }
 
 // добавляем в канал список ссылок к удалению для указанного пользователя
-func (a Application) deleteUserShortAsync(userID string, shorts []string) {
+func (a Application) DeleteUserShortAsync(userID string, shorts []string) {
 
 	// добавляем все данные без разбора.
 	// Проверять принадлежность ссылки пользователю будем асинхронно в горутине

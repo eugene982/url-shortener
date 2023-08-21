@@ -31,3 +31,9 @@ cmd/client
 
 #documentation
 doc/
+
+#pprof
+pprof/
+
+#scripts
+scripts/

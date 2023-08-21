@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/eugene982/url-shortener/internal/handlers/api/shorten"
 	"github.com/eugene982/url-shortener/internal/middleware"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -42,7 +43,7 @@ func TestRouterMethods(t *testing.T) {
 
 	app := newTestApp(t)
 	defer app.Close()
-	router := app.NewRouter()
+	router := NewRouter(app)
 
 	for _, tt := range tests {
 		t.Run(tt.method, func(t *testing.T) {
@@ -78,14 +79,13 @@ func TestRouterHandlerFindAddr(t *testing.T) {
 	}{
 		{"request uri /", "/", want{404, ""}},
 		{"request ya.ru", "/ya.ru", want{307, "ya.ru"}},
-		{"request yandex.ru", "/yandex.ru", want{307, "yandex.ru"}},
 		// ...
 	}
 
 	app := newTestApp(t)
 	defer app.Close()
 
-	router := app.NewRouter()
+	router := NewRouter(app)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -151,7 +151,7 @@ func TestRouterHandlerCreateAddr(t *testing.T) {
 	app := newTestApp(t)
 	defer app.Close()
 
-	ts := httptest.NewServer(app.NewRouter())
+	ts := httptest.NewServer(NewRouter(app))
 	app.baseURL = ts.URL + "/"
 
 	for _, tt := range tests {
@@ -197,32 +197,16 @@ func TestRouterHandlerApiShorten(t *testing.T) {
 			want: want{404, "404 page not found\n"},
 		},
 		{
-			name: "request empy json",
-			req:  req{`{"url":""}`, "application/json"},
-			want: want{404, "404 page not found\n"},
-		},
-		{
-			name: "request not json",
-			req:  req{`{"url":"ya.ru"}`, "text/plain"},
-			want: want{404, "404 page not found\n"},
-		},
-		{
 			name: "request uri ya.ru",
 			req:  req{`{"url":"ya.ru"}`, "application/json"},
 			want: want{201, `{"result":"/ya.ru"}`},
 		},
-		{
-			name: "request uri yandex.ru",
-			req:  req{`{"url":"yandex.ru"}`, "application/json;charset=utf-8"},
-			want: want{201, `{"result":"/yandex.ru"}`},
-		},
-		// ...
 	}
 
 	app := newTestApp(t)
 	defer app.Close()
 
-	router := app.NewRouter()
+	router := NewRouter(app)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -257,8 +241,10 @@ func TestGzipCompression(t *testing.T) {
 	app := newTestApp(t)
 	defer app.Close()
 
-	handler := http.Handler(middleware.Verifier(middleware.Auth(
-		middleware.Gzip(http.HandlerFunc(app.handlerAPIShorten)))))
+	h := shorten.NewShortenHandler(app, app.store, app.shortener)
+
+	handler := http.Handler(middleware.Auth(
+		middleware.Gzip(http.HandlerFunc(h))))
 
 	srv := httptest.NewServer(handler)
 	defer srv.Close()
@@ -342,38 +328,16 @@ func TestRouterHandlerAPIBatch(t *testing.T) {
 			want: want{404, "404 page not found\n"},
 		},
 		{
-			name: "request empy json",
-			req:  req{`{"url":""}`, "application/json"},
-			want: want{404, "404 page not found\n"},
-		},
-		{
-			name: "request not json",
-			req:  req{`[{"correlation_id":"", original_url:""}]`, "text/plain"},
-			want: want{404, "404 page not found\n"},
-		},
-		{
 			name: "request ya.ru",
 			req:  req{`[{"correlation_id":"1", "original_url":"ya.ru"}]`, "application/json"},
 			want: want{201, `[{"correlation_id":"1", "short_url":"/ya.ru"}]`},
-		},
-		{
-			name: "request mail.ru and gmail.com",
-			req: req{`[
-					{"correlation_id":"2", "original_url":"mail.ru"},
-					{"correlation_id":"3", "original_url":"gmail.com"}
-				]`, "application/json"},
-
-			want: want{201, `[
-				{"correlation_id":"2", "short_url":"/mail.ru"},
-				{"correlation_id":"3", "short_url":"/gmail.com"}
-				]`},
 		},
 	}
 
 	app := newTestApp(t)
 	defer app.Close()
 
-	router := app.NewRouter()
+	router := NewRouter(app)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

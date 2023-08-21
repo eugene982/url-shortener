@@ -3,10 +3,10 @@ module github.com/eugene982/url-shortener
 go 1.18
 
 require (
-	github.com/go-chi/chi/v5 v5.0.8
-	github.com/jackc/pgx/v5 v5.3.1
+	github.com/go-chi/chi/v5 v5.0.10
+	github.com/jackc/pgx/v5 v5.4.2
 	github.com/stretchr/testify v1.8.2
-	go.uber.org/zap v1.24.0
+	go.uber.org/zap v1.25.0
 )
 
 require (

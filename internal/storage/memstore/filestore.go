@@ -36,7 +36,7 @@ func (fs *fileStorage) Close() error {
 	if fs == nil {
 		return nil
 	}
-	return fs.Close()
+	return fs.file.Close()
 }
 
 // чтение всех ранее сохраненных данных
