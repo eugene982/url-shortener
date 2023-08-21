@@ -17,7 +17,7 @@ const (
 	delShortDuration = time.Second
 )
 
-// Управлятель ссылок
+// Application основное приложение
 type Application struct {
 	shortener    shortener.Shortener
 	store        storage.Storage
@@ -26,7 +26,7 @@ type Application struct {
 	stopDelChan  chan struct{}
 }
 
-// Функция конструктор приложения.
+// NewApplication функция-конструктор приложения.
 func NewApplication(shortener shortener.Shortener,
 	store storage.Storage, baseURL string) (*Application, error) {
 
@@ -47,7 +47,7 @@ func NewApplication(shortener shortener.Shortener,
 	return app, nil
 }
 
-// закрываем приложение
+// Close закрываем приложение.
 func (a *Application) Close() (err error) {
 	a.stopDelChan <- struct{}{}
 	if err = a.store.Close(); err != nil {
@@ -115,6 +115,7 @@ func (a *Application) startDeletionShortUrls() {
 	}
 }
 
+// GetBaseURL - функция возвращает основной адрес.
 func (a *Application) GetBaseURL() string {
 	return a.baseURL
 }
@@ -125,7 +126,8 @@ type deleteUserData struct {
 	shortURLs []string
 }
 
-// добавляем в канал список ссылок к удалению для указанного пользователя
+// DeleteUserShortAsync - запуск асинхронного удаления ссылок пользователя.
+// Добавляем в канал список ссылок к удалению для указанного пользователя
 func (a Application) DeleteUserShortAsync(userID string, shorts []string) {
 
 	// добавляем все данные без разбора.

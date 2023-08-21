@@ -17,7 +17,7 @@ import (
 	"github.com/eugene982/url-shortener/internal/handlers/root"
 )
 
-// Возвращает роутер
+// NewRouter функция создаёт и возвращает роутер.
 func NewRouter(a *Application) http.Handler {
 
 	r := chi.NewRouter()

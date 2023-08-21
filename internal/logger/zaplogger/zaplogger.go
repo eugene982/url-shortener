@@ -6,12 +6,13 @@ import (
 	"github.com/eugene982/url-shortener/internal/logger"
 )
 
-// Описание структуры логгера
+// ZapLogger - логгер zap
 type ZapLogger struct {
 	zap *zap.Logger
 }
 
-// Конструктор нового логгера
+// Initialize создание нового логгера.
+// Сохранение ссылки в глобальную переменную Log.
 func Initialize(level string) error {
 	lvl, err := zap.ParseAtomicLevel(level)
 	if err != nil {
@@ -36,22 +37,22 @@ func Initialize(level string) error {
 	return nil
 }
 
-// Отладочные сообщения
+// Debug Отладочные сообщения
 func (z *ZapLogger) Debug(msg string, a ...any) {
 	z.zap.Sugar().Debugw(msg, a...)
 }
 
-// Информационные сообщения
+// Info Информационные сообщения
 func (z *ZapLogger) Info(msg string, a ...any) {
 	z.zap.Sugar().Infow(msg, a...)
 }
 
-// Предупреждения
+// Warn Предупреждения
 func (z *ZapLogger) Warn(msg string, a ...any) {
 	z.zap.Sugar().Warnw(msg, a...)
 }
 
-// Ошибки
+// Error Ошибки
 func (z *ZapLogger) Error(err error, a ...any) {
 	z.zap.Sugar().Errorw(err.Error(), a...)
 }

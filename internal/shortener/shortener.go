@@ -12,11 +12,12 @@ const (
 	hashLen = 10 // размер сокращения
 )
 
-// Сокращатель ссылок
+// Shortener интерфейс сокращателя ссылок
 type Shortener interface {
 	Short(string) (string, error)
 }
 
+// SimpleShortener реализация простого сокращателя.
 type SimpleShortener struct {
 	symTab []byte       // символы для хеша
 	crcTab *crc64.Table // для контрольной суммы
@@ -26,7 +27,7 @@ type SimpleShortener struct {
 // Утверждение типа, ошибка компиляции
 var _ Shortener = (*SimpleShortener)(nil)
 
-// Функция-конструктор
+// NewSimpleShortener функция-конструктор сокращателя
 func NewSimpleShortener() *SimpleShortener {
 	// создаём таблицу символов которые будем использовать в хеше
 	symTab := make([]byte, 0, 64)
@@ -49,6 +50,8 @@ func NewSimpleShortener() *SimpleShortener {
 	}
 }
 
+// Short возвращает короткую ссылку.
+// Реализация интерфецса.
 // Будем сохкращать строку до 10 символов
 func (s *SimpleShortener) Short(addr string) (short string, err error) {
 	sum := crc64.Checksum([]byte(addr), s.crcTab)

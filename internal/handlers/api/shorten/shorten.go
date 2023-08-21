@@ -13,8 +13,8 @@ import (
 	"github.com/eugene982/url-shortener/internal/storage"
 )
 
-// Генерирование короткой ссылки и сохранеине её во временном хранилище
-// из запроса формата JSON
+// NewShortenHandler эндпоинт получения коротких ссылок по списку.
+// Генерирование короткой ссылки и сохранеине её в хранилище из запроса формата JSON.
 func NewShortenHandler(b handlers.BaseURLGetter, setter handlers.Setter, sh shortener.Shortener) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close() // Очищаем тело

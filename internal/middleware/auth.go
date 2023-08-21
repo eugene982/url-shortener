@@ -36,6 +36,7 @@ func init() {
 	userRandID = rand.New(rand.NewSource(time.Now().UnixNano()))
 }
 
+// Auth прослойка jwt авторизации
 func Auth(next http.Handler) http.Handler {
 
 	fn := func(w http.ResponseWriter, r *http.Request) {
@@ -93,11 +94,12 @@ func Auth(next http.Handler) http.Handler {
 		http.HandlerFunc(fn))
 }
 
+// RequestWithUserID - записть идентификатора пользователя в контекст запроса.
 func RequestWithUserID(r *http.Request, userID string) *http.Request {
 	return r.WithContext(context.WithValue(r.Context(), contextKeyUserID, userID))
 }
 
-// Добавление идентификатора пользователя в куки
+// SetCookieUserID добавление идентификатора пользователя в куки
 func SetCookieUserID(userID string, w http.ResponseWriter) error {
 	_, tokenString, err := tokenAuth.Encode(map[string]interface{}{
 		"user_id": userID,
@@ -113,7 +115,7 @@ func SetCookieUserID(userID string, w http.ResponseWriter) error {
 	return nil
 }
 
-// Возвращает идентификатор пользователя из контекста
+// GetUserID возвращает идентификатор пользователя из контекста
 func GetUserID(r *http.Request) (string, error) {
 	val := r.Context().Value(contextKeyUserID)
 	if val == nil {

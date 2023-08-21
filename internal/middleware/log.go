@@ -30,7 +30,7 @@ func (l *logResponseWriter) WriteHeader(statusCode int) {
 	l.statusCode = statusCode
 }
 
-// Логирование запросов
+// Log прослойка логирование запросов.
 func Log(next http.Handler) http.Handler {
 
 	fn := func(w http.ResponseWriter, r *http.Request) {

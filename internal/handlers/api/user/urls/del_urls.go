@@ -9,7 +9,8 @@ import (
 	"github.com/eugene982/url-shortener/internal/middleware"
 )
 
-// удаление ссылок
+// NewDeleteURLsHandlers эндпоинт удаление ссылок пользователя.
+// Асинхронный.
 func NewDeleteURLsHandlers(d handlers.UserShortAsyncDeleter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close() // Очищаем тело

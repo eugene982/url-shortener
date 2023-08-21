@@ -8,7 +8,7 @@ import (
 	"github.com/eugene982/url-shortener/internal/logger"
 )
 
-// Проверка соединения
+// NewPingHandler эндпоинт проверки соединения.
 func NewPingHandler(p handlers.Pinger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := p.Ping(r.Context())

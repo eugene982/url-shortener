@@ -11,7 +11,7 @@ import (
 	"github.com/eugene982/url-shortener/internal/storage"
 )
 
-// Получение полного адреса по короткой ссылке
+// NewFindAddrHandler эндпоинт получение полного адреса по короткой ссылке.
 func NewFindAddrHandler(g handlers.AddrGetter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 

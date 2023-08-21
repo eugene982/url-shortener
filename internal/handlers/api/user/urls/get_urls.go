@@ -11,7 +11,7 @@ import (
 	"github.com/eugene982/url-shortener/internal/model"
 )
 
-// Список ссылок пользователя
+// NewUserURLsHandler эндпоинт получения списка ссылок пользователя.
 func NewUserURLsHandler(b handlers.BaseURLGetter, u handlers.UserURLGetter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close() // Очищаем тело
