@@ -10,12 +10,12 @@ type RequestShorten struct {
 	URL string `json:"url"`
 }
 
-// Структура ответа /api/shorten
+// ResponseShorten Структура ответа /api/shorten
 type ResponseShorten struct {
 	Result string `json:"result"`
 }
 
-// Валидация
+// IsValid валидация полей структуры RequestShorten
 func (req RequestShorten) IsValid() (bool, error) {
 	if strings.TrimSpace(req.URL) == "" {
 		return false, fmt.Errorf("url is empty")
@@ -23,7 +23,7 @@ func (req RequestShorten) IsValid() (bool, error) {
 	return true, nil
 }
 
-// Данные для хранения в файловом хранилище
+// StoreData данные для хранения в файловом хранилище
 type StoreData struct {
 	ID          string `json:"uuid"`
 	UserID      string `json:"user_id" db:"user_id"`
@@ -32,6 +32,7 @@ type StoreData struct {
 	DeletedFlag bool   `json:"is_deleted" db:"is_deleted"`
 }
 
+// IsValid валидация полей структуры StoreData
 func (st StoreData) IsValid() (bool, error) {
 	if strings.TrimSpace(st.ShortURL) == "" {
 		return false, fmt.Errorf("short URL is empty")
@@ -42,13 +43,13 @@ func (st StoreData) IsValid() (bool, error) {
 	return true, nil
 }
 
-// запрос на добавление POST /api/shorten/batch
+// BatchRequest запрос на добавление POST /api/shorten/batch
 type BatchRequest struct {
 	CorrelationID string `json:"correlation_id"`
 	OriginalURL   string `json:"original_url"`
 }
 
-// Валидация входящей стуктуры
+// IsValid валидация полей входящей стуктуры BatchRequest
 func (br BatchRequest) IsValid() (bool, error) {
 	if strings.TrimSpace(br.CorrelationID) == "" {
 		return false, fmt.Errorf("correlation ID is empty")
@@ -59,12 +60,13 @@ func (br BatchRequest) IsValid() (bool, error) {
 	return true, nil
 }
 
-// ответ на добавление POST /api/shorten/batch
+// BatchResponse ответ на добавление POST /api/shorten/batch
 type BatchResponse struct {
 	CorrelationID string `json:"correlation_id"`
 	ShortURL      string `json:"short_url"`
 }
 
+// UserURLResponse ответ возвращает ссылки пользователя.
 type UserURLResponse struct {
 	UserID      int64
 	OriginalURL string `json:"original_url"`

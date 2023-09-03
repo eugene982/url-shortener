@@ -15,7 +15,7 @@ var (
 	ErrAddressConflict = errors.New("address conflict")
 )
 
-// Хранитель ссылок
+// Storage интрефейс хранилища ссылок пользователей
 type Storage interface {
 	Close() error
 	Ping(context.Context) error

@@ -8,21 +8,26 @@ import (
 	"hash/crc64"
 )
 
-// Сокращатель ссылок
+const (
+	hashLen = 10 // размер сокращения
+)
+
+// Shortener интерфейс сокращателя ссылок
 type Shortener interface {
 	Short(string) (string, error)
 }
 
+// SimpleShortener реализация простого сокращателя.
 type SimpleShortener struct {
-	symTab  []byte       // символы для хеша
-	hashLen int          // размер сокращения
-	crcTab  *crc64.Table // для контрольной суммы
+	symTab []byte       // символы для хеша
+	crcTab *crc64.Table // для контрольной суммы
+
 }
 
 // Утверждение типа, ошибка компиляции
 var _ Shortener = (*SimpleShortener)(nil)
 
-// Функция-конструктор
+// NewSimpleShortener функция-конструктор сокращателя
 func NewSimpleShortener() *SimpleShortener {
 	// создаём таблицу символов которые будем использовать в хеше
 	symTab := make([]byte, 0, 64)
@@ -41,11 +46,12 @@ func NewSimpleShortener() *SimpleShortener {
 
 	return &SimpleShortener{
 		symTab,
-		10, // сокращаем до 10 символов
 		crc64.MakeTable(crc64.ISO),
 	}
 }
 
+// Short возвращает короткую ссылку.
+// Реализация интерфецса.
 // Будем сохкращать строку до 10 символов
 func (s *SimpleShortener) Short(addr string) (short string, err error) {
 	sum := crc64.Checksum([]byte(addr), s.crcTab)
@@ -59,14 +65,14 @@ func (s *SimpleShortener) Short(addr string) (short string, err error) {
 // Функция преобразует хэш в строку нужной длинны
 // Пробовал на основе base64 но случаются коллизии т.к. начало строк часто совпадают.
 func (s *SimpleShortener) toString(val uint64) string {
-	buff := make([]byte, s.hashLen) // можно вынести в структуру, чтоб каждый раз не пересоздавать.
+	var buff [hashLen]byte
 
 	reminder := val
 	size := len(s.symTab)
 
-	for i := 0; i < s.hashLen; i++ {
+	for i := 0; i < hashLen; i++ {
 		buff[i] = s.symTab[(reminder % uint64(size))]
 		reminder /= uint64(size)
 	}
-	return string(buff)
+	return string(buff[:])
 }

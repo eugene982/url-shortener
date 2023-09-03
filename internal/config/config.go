@@ -6,7 +6,7 @@ import (
 	"github.com/caarlos0/env/v8"
 )
 
-// Объявление структуры конфигурации
+// Configuration структура получения данных из командной строки и окружения.
 type Configuration struct {
 	ServAddr        string `env:"SERVER_ADDRESS"` // адрес сервера
 	BaseURL         string `env:"BASE_URL"`       // базовый адрес
@@ -33,7 +33,7 @@ func init() {
 	env.Parse(&config)
 }
 
-// Возвращаем копию конфигурации полученную из флагов и окружения
+// Config возвращаем копию конфигурации полученную из флагов и окружения.
 func Config() Configuration {
 	return config
 }

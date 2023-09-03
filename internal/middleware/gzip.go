@@ -9,7 +9,7 @@ import (
 	"github.com/eugene982/url-shortener/internal/logger"
 )
 
-// упаковка и распаковка запросов
+// Gzip прослойка упаковки и распаковка запросов gzip
 func Gzip(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 

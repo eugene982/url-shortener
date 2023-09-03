@@ -6,6 +6,7 @@ import (
 	"net/http"
 )
 
+// GzipComressWriter запись сжатых данных в ответ
 type GzipComressWriter struct {
 	w  http.ResponseWriter
 	zw *gzip.Writer
@@ -14,7 +15,7 @@ type GzipComressWriter struct {
 // Проверка на совместимость с интерфейсом http.ResponseWriter
 var _ http.ResponseWriter = (*GzipComressWriter)(nil)
 
-// Конструктор
+// NewGzipComressWriter функция-конструктор
 func NewGzipComressWriter(w http.ResponseWriter) (*GzipComressWriter, error) {
 	zw, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
 	if err != nil {
@@ -39,12 +40,12 @@ func (cw *GzipComressWriter) WriteHeader(statusCode int) {
 	cw.w.WriteHeader(statusCode)
 }
 
-// Досылка всех данных из буфера
+// Close - досылка всех данных из буфера, закрытие.
 func (cw *GzipComressWriter) Close() error {
 	return cw.zw.Close()
 }
 
-// Структура для чтения упакованных данных
+// GzipCompressReader Структура для чтения упакованных данных.
 type GzipCompressReader struct {
 	r  io.ReadCloser
 	zr *gzip.Reader
@@ -53,7 +54,7 @@ type GzipCompressReader struct {
 // Проверка на совместимость с интерфейсом io.ReadCloser
 var _ io.ReadCloser = (*GzipCompressReader)(nil)
 
-// Конструктор
+// NewGzipCompressReader функция-конструктор
 func NewGzipCompressReader(r io.ReadCloser) (*GzipCompressReader, error) {
 	zr, err := gzip.NewReader(r)
 	if err != nil {
@@ -67,7 +68,7 @@ func (cr *GzipCompressReader) Read(p []byte) (n int, err error) {
 	return cr.zr.Read(p)
 }
 
-// Read implements http.ReadCloser
+// Close implements http.ReadCloser
 func (cr *GzipCompressReader) Close() error {
 	if err := cr.r.Close(); err != nil {
 		return err

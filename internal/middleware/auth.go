@@ -36,6 +36,7 @@ func init() {
 	userRandID = rand.New(rand.NewSource(time.Now().UnixNano()))
 }
 
+// Auth прослойка jwt авторизации
 func Auth(next http.Handler) http.Handler {
 
 	fn := func(w http.ResponseWriter, r *http.Request) {
@@ -48,21 +49,12 @@ func Auth(next http.Handler) http.Handler {
 			// пусть пока рандомно выдаётся
 			userID = strconv.FormatInt(userRandID.Int63(), 10)
 
-			_, tokenString, err := tokenAuth.Encode(map[string]interface{}{
-				"user_id": userID,
-			})
-
+			err = SetCookieUserID(userID, w)
 			if err != nil {
 				logger.Error(err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-
-			http.SetCookie(w, &http.Cookie{
-				Name:    "jwt",
-				Value:   tokenString,
-				Expires: time.Now().Add(tokenExp),
-			})
 
 			ru := r.WithContext(context.WithValue(ctx, contextKeyUserID, userID))
 			logger.Info("generate new user id", "user_id", userID)
@@ -93,19 +85,37 @@ func Auth(next http.Handler) http.Handler {
 		}
 
 		logger.Info("user is logged", "user_id", userID)
-		ru := r.WithContext(context.WithValue(ctx, contextKeyUserID, userID))
+		ru := RequestWithUserID(r, userID)
 		next.ServeHTTP(w, ru)
 	}
 
-	return http.HandlerFunc(fn)
+	// запускаем через верификатор
+	return jwtauth.Verifier(tokenAuth)(
+		http.HandlerFunc(fn))
 }
 
-func Verifier(next http.Handler) http.Handler {
-	fn := jwtauth.Verifier(tokenAuth)
-	return fn(next)
+// RequestWithUserID - записть идентификатора пользователя в контекст запроса.
+func RequestWithUserID(r *http.Request, userID string) *http.Request {
+	return r.WithContext(context.WithValue(r.Context(), contextKeyUserID, userID))
 }
 
-// Возвращает идентификатор пользователя из контекста
+// SetCookieUserID добавление идентификатора пользователя в куки
+func SetCookieUserID(userID string, w http.ResponseWriter) error {
+	_, tokenString, err := tokenAuth.Encode(map[string]interface{}{
+		"user_id": userID,
+	})
+	if err != nil {
+		return err
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:    "jwt",
+		Value:   tokenString,
+		Expires: time.Now().Add(tokenExp),
+	})
+	return nil
+}
+
+// GetUserID возвращает идентификатор пользователя из контекста
 func GetUserID(r *http.Request) (string, error) {
 	val := r.Context().Value(contextKeyUserID)
 	if val == nil {

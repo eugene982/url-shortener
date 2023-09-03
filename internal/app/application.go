@@ -17,15 +17,16 @@ const (
 	delShortDuration = time.Second
 )
 
-// Управлятель ссылок
+// Application основное приложение
 type Application struct {
 	shortener    shortener.Shortener
 	store        storage.Storage
 	baseURL      string
 	delShortChan chan deleteUserData
+	stopDelChan  chan struct{}
 }
 
-// Функция конструктор приложения.
+// NewApplication функция-конструктор приложения.
 func NewApplication(shortener shortener.Shortener,
 	store storage.Storage, baseURL string) (*Application, error) {
 
@@ -40,13 +41,15 @@ func NewApplication(shortener shortener.Shortener,
 		delShortChan: make(chan deleteUserData, delShortChanSize),
 	}
 
+	app.stopDelChan = make(chan struct{})
 	go app.startDeletionShortUrls()
 
 	return app, nil
 }
 
-// закрываем приложение
+// Close закрываем приложение.
 func (a *Application) Close() (err error) {
+	a.stopDelChan <- struct{}{}
 	if err = a.store.Close(); err != nil {
 		logger.Error(err)
 	}
@@ -62,6 +65,8 @@ func (a *Application) startDeletionShortUrls() {
 	// копим пачку ссылок
 	for {
 		select {
+		case <-a.stopDelChan:
+			return // завершаем горутину
 		case d := <-a.delShortChan:
 			delete = append(delete, d)
 
@@ -70,7 +75,7 @@ func (a *Application) startDeletionShortUrls() {
 				continue
 			}
 
-			ctx, close := context.WithCancel(context.Background())
+			ctx := context.Background()
 
 			// сгруппируем по пользователю
 			usersURLs := map[string][]string{}
@@ -106,9 +111,13 @@ func (a *Application) startDeletionShortUrls() {
 				continue //
 			}
 			delete = delete[:0] // очищаем при успешном удалении
-			close()
 		}
 	}
+}
+
+// GetBaseURL - функция возвращает основной адрес.
+func (a *Application) GetBaseURL() string {
+	return a.baseURL
 }
 
 // Структура для складывания в канал пары Пользоватьль - Ссылки
@@ -117,8 +126,9 @@ type deleteUserData struct {
 	shortURLs []string
 }
 
-// добавляем в канал список ссылок к удалению для указанного пользователя
-func (a Application) deleteUserShortAsync(userID string, shorts []string) {
+// DeleteUserShortAsync - запуск асинхронного удаления ссылок пользователя.
+// Добавляем в канал список ссылок к удалению для указанного пользователя
+func (a Application) DeleteUserShortAsync(userID string, shorts []string) {
 
 	// добавляем все данные без разбора.
 	// Проверять принадлежность ссылки пользователю будем асинхронно в горутине
