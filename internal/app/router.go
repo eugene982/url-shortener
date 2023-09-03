@@ -45,14 +45,21 @@ func NewRouter(a *Application) http.Handler {
 		http.NotFound(w, r)
 	})
 
-	// benchmarks
-	r.Group(func(r chi.Router) {
-		r.HandleFunc("/debug/pprof/*", pprof.Index)
-		r.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-		r.HandleFunc("/debug/pprof/profile", pprof.Profile)
-		r.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-		r.HandleFunc("/debug/pprof/trace", pprof.Trace)
-	})
+	return r
+}
+
+// NewProfRouter создаёт маршрутизатор для профилирования
+func newProfRouter() http.Handler {
+
+	r := chi.NewRouter()
+	r.Use(middleware.Log) // прослойка логирования
+
+	r.HandleFunc("/debug/pprof/*", pprof.Index)
+	r.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	r.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	r.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	r.HandleFunc("/debug/pprof/trace", pprof.Trace)
 
 	return r
+
 }

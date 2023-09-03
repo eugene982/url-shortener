@@ -14,11 +14,13 @@ type Configuration struct {
 	LogLevel        string `env:"LOG_LEVEL"` // уровень логирования
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	DatabaseDSN     string `env:"DATABASE_DSN"`
+	ProfAddr        string
 }
 
 var config Configuration
 
-func init() {
+// Config возвращаем копию конфигурации полученную из флагов и окружения.
+func Config() Configuration {
 	// устанавливаем переменные для флага по умолчанию
 	flag.StringVar(&config.ServAddr, "a", ":8080", "server address")
 	flag.StringVar(&config.BaseURL, "b", "http://localhost:8080", "base address")
@@ -27,13 +29,10 @@ func init() {
 	flag.StringVar(&config.FileStoragePath, "f", "/tmp/short-url-db.json", "file storage path")
 	flag.StringVar(&config.DatabaseDSN, "d", "", "postgres connection string")
 	//flag.StringVar(&config.DatabaseDSN, "d", "postgres://test:test@localhost/url_shorten", "postgres connection string")
+	flag.StringVar(&config.ProfAddr, "p", ":8081", "pprof server address")
 
 	// получаем конфигурацию из флагов и/или окружения
 	flag.Parse()
 	env.Parse(&config)
-}
-
-// Config возвращаем копию конфигурации полученную из флагов и окружения.
-func Config() Configuration {
 	return config
 }

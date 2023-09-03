@@ -42,7 +42,6 @@ func TestRouterMethods(t *testing.T) {
 	}
 
 	app := newTestApp(t)
-	defer app.Close()
 	router := NewRouter(app)
 
 	for _, tt := range tests {
@@ -83,7 +82,6 @@ func TestRouterHandlerFindAddr(t *testing.T) {
 	}
 
 	app := newTestApp(t)
-	defer app.Close()
 
 	router := NewRouter(app)
 
@@ -149,7 +147,6 @@ func TestRouterHandlerCreateAddr(t *testing.T) {
 	}
 
 	app := newTestApp(t)
-	defer app.Close()
 
 	ts := httptest.NewServer(NewRouter(app))
 	app.baseURL = ts.URL + "/"
@@ -204,8 +201,6 @@ func TestRouterHandlerApiShorten(t *testing.T) {
 	}
 
 	app := newTestApp(t)
-	defer app.Close()
-
 	router := NewRouter(app)
 
 	for _, tt := range tests {
@@ -239,7 +234,6 @@ func TestRouterHandlerApiShorten(t *testing.T) {
 
 func TestGzipCompression(t *testing.T) {
 	app := newTestApp(t)
-	defer app.Close()
 
 	h := shorten.NewShortenHandler(app, app.store, app.shortener)
 
@@ -335,8 +329,6 @@ func TestRouterHandlerAPIBatch(t *testing.T) {
 	}
 
 	app := newTestApp(t)
-	defer app.Close()
-
 	router := NewRouter(app)
 
 	for _, tt := range tests {

@@ -3,12 +3,18 @@ package app
 
 import (
 	"context"
+	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
+	"github.com/eugene982/url-shortener/internal/config"
 	"github.com/eugene982/url-shortener/internal/logger"
 	"github.com/eugene982/url-shortener/internal/shortener"
 	"github.com/eugene982/url-shortener/internal/storage"
+	"github.com/eugene982/url-shortener/internal/storage/memstore"
+	"github.com/eugene982/url-shortener/internal/storage/pgxstore"
+	"github.com/jmoiron/sqlx"
 )
 
 const (
@@ -22,33 +28,97 @@ type Application struct {
 	shortener    shortener.Shortener
 	store        storage.Storage
 	baseURL      string
+	server       *http.Server
+	profServer   *http.Server
 	delShortChan chan deleteUserData
 	stopDelChan  chan struct{}
 }
 
-// NewApplication функция-конструктор приложения.
-func NewApplication(shortener shortener.Shortener,
-	store storage.Storage, baseURL string) (*Application, error) {
+// // NewApplication функция-конструктор приложения.
+// func NewApplication(shortener shortener.Shortener,
+// 	store storage.Storage, baseURL string) (*Application, error) {
 
-	if !strings.HasSuffix(baseURL, "/") {
-		baseURL += "/"
+// 	if !strings.HasSuffix(baseURL, "/") {
+// 		baseURL += "/"
+// 	}
+
+// 	app := &Application{
+// 		shortener:    shortener,
+// 		store:        store,
+// 		baseURL:      baseURL,
+// 		delShortChan: make(chan deleteUserData, delShortChanSize),
+// 	}
+
+// 	app.stopDelChan = make(chan struct{})
+// 	go app.startDeletionShortUrls()
+
+// 	return app, nil
+// }
+
+func New(conf config.Configuration) (*Application, error) {
+	var (
+		app Application
+		db  *sqlx.DB
+		err error
+	)
+
+	app.baseURL = conf.BaseURL
+	if !strings.HasSuffix(conf.BaseURL, "/") {
+		app.baseURL += "/"
 	}
 
-	app := &Application{
-		shortener:    shortener,
-		store:        store,
-		baseURL:      baseURL,
-		delShortChan: make(chan deleteUserData, delShortChanSize),
+	if conf.DatabaseDSN != "" {
+		//"postgres://username:password@localhost:5432/database_name"
+		db, err = sqlx.Open("pgx", conf.DatabaseDSN)
+		if err != nil {
+			return nil, fmt.Errorf("error open sql dartabase: %w", err)
+		}
+		if app.store, err = pgxstore.New(db); err != nil {
+			return nil, fmt.Errorf("error create postgres store: %w", err)
+		}
+		logger.Info("new pgxstore", "dsn", conf.DatabaseDSN)
+
+	} else {
+		if app.store, err = memstore.New(conf.FileStoragePath); err != nil {
+			return nil, fmt.Errorf("error create mem store: %w", err)
+		}
+		logger.Info("new memstore", "file", conf.FileStoragePath)
 	}
+
+	app.shortener = shortener.NewSimpleShortener()
 
 	app.stopDelChan = make(chan struct{})
-	go app.startDeletionShortUrls()
+	app.delShortChan = make(chan deleteUserData, delShortChanSize)
 
-	return app, nil
+	// Установим таймауты, вдруг соединение будет нестабильным
+	app.server = &http.Server{
+		ReadTimeout:  time.Duration(conf.Timeout) * time.Second,
+		WriteTimeout: time.Duration(conf.Timeout) * time.Second,
+		Addr:         conf.ServAddr,
+		Handler:      NewRouter(&app),
+	}
+
+	// Установим сервер сбора отладочной информации
+	app.profServer = &http.Server{
+		ReadTimeout:  time.Duration(conf.Timeout) * time.Second,
+		WriteTimeout: time.Duration(conf.Timeout) * time.Second,
+		Addr:         conf.ProfAddr,
+		Handler:      newProfRouter(),
+	}
+
+	return &app, nil
 }
 
-// Close закрываем приложение.
-func (a *Application) Close() (err error) {
+// Start - запуск сервера.
+// Запуск прослушивания канала на удаление ссылок
+func (a *Application) Start() error {
+	go a.startDeletionShortUrls()
+	go a.profServer.ListenAndServe()
+	return a.server.ListenAndServe()
+}
+
+// Stop закрываем приложение.
+func (a *Application) Stop() (err error) {
 	a.stopDelChan <- struct{}{}
 	if err = a.store.Close(); err != nil {
 		logger.Error(err)
