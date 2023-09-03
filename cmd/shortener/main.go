@@ -28,7 +28,17 @@ const (
 	closeServerTimeout = time.Second * 3
 )
 
+var (
+	buildVersion string = "N/A" // версия сборки
+	buildDate    string = "N/A" // дата сборки
+	buildCommit  string = "N/A" // сомментарий сборки
+)
+
 func main() {
+
+	fmt.Println("Build version:", buildVersion)
+	fmt.Println("Build date:", buildDate)
+	fmt.Println("Build commit:", buildCommit)
 
 	if err := run(); err != nil {
 		log.Fatal(err)
