@@ -5,6 +5,7 @@ package osexit
 import (
 	"go/ast"
 	"go/token"
+	"regexp"
 
 	"golang.org/x/tools/go/analysis"
 )
@@ -15,6 +16,9 @@ var Analyzer = &analysis.Analyzer{
 	Doc:  "check call os.Exit in main function (package main)", // Текст описания работы анализатора
 	Run:  run,                                                  // Функция, которая отвечает за анадиз исходного кода
 }
+
+// Исключаем сгенерированные файла
+var excludeGenFileComent = regexp.MustCompile(`^// Code generated .* DO NOT EDIT\.$`)
 
 func run(pass *analysis.Pass) (any, error) {
 
@@ -28,6 +32,10 @@ func run(pass *analysis.Pass) (any, error) {
 
 		// 	функцией ast.Inspect проходим по всем узлам AST
 		ast.Inspect(file, func(node ast.Node) bool {
+
+			if excludeFile(file) {
+				return false
+			}
 
 			switch x := node.(type) {
 			case *ast.File: // проверка имени пакета
@@ -62,4 +70,15 @@ func isOsExitFunc(expr *ast.ExprStmt, ignore token.Pos) bool {
 	}
 
 	return selector.Sel.Name == "Exit"
+}
+
+func excludeFile(file *ast.File) bool {
+	for _, c := range file.Comments {
+		for _, comment := range c.List {
+			if excludeGenFileComent.MatchString(comment.Text) {
+				return true
+			}
+		}
+	}
+	return false
 }
