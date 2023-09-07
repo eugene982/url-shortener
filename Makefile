@@ -23,6 +23,9 @@ vet:
 staticcheck:
 	$(GOBIN)/staticcheck ./...
 
+codecov:
+	go test -race -coverprofile=coverage.out -covermode=atomic ./cmd/... ./internal/...
+
 golangci-lint:
 	$(GOBIN)/golangci-lint run ./...	
 
@@ -91,8 +94,3 @@ test15:
 
 alltests: tests build test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11 test12 test13 test14 test15
 	@echo "all tests - PASS"
-
-gitlint: vet gofmt golangci-lint
-
-alllint: vet staticcheck gofmt golangci-lint buildlint lint
-	@echo "all lint - PASS" 
