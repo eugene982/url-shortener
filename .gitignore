@@ -23,7 +23,6 @@ vendor/
 .vscode
 
 #autotests
-.github
 bin
 
 #client

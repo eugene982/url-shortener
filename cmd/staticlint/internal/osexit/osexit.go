@@ -4,7 +4,6 @@ package osexit
 
 import (
 	"go/ast"
-	"go/token"
 	"regexp"
 
 	"golang.org/x/tools/go/analysis"
@@ -12,9 +11,9 @@ import (
 
 // Analyzer информация о б анализаторе
 var Analyzer = &analysis.Analyzer{
-	Name: "osexit",                                             // Имя анализатора
-	Doc:  "check call os.Exit in main function (package main)", // Текст описания работы анализатора
-	Run:  run,                                                  // Функция, которая отвечает за анадиз исходного кода
+	Name: "osexit",                                               // Имя анализатора
+	Doc:  "check call os.Exit() in main function (package main)", // Текст описания работы анализатора
+	Run:  run,                                                    // Функция, которая отвечает за анадиз исходного кода
 }
 
 // Исключаем сгенерированные файла
@@ -27,7 +26,6 @@ func run(pass *analysis.Pass) (any, error) {
 		var (
 			isMainPkg bool
 			isMainFn  bool
-			ignorePos token.Pos
 		)
 
 		// 	функцией ast.Inspect проходим по всем узлам AST
@@ -45,8 +43,8 @@ func run(pass *analysis.Pass) (any, error) {
 				isMainFn = x.Name.Name == "main"
 
 			case *ast.ExprStmt: // проверка выражения на вызов нужной функции
-				if isMainFn && isMainPkg && isOsExitFunc(x, ignorePos) {
-					pass.Reportf(x.Pos(), "os.Exit in main func")
+				if isMainFn && isMainPkg && isOsExitFunc(x) {
+					pass.Reportf(x.Pos(), "call os.Exit() in main function")
 				}
 			}
 			return true
@@ -56,7 +54,7 @@ func run(pass *analysis.Pass) (any, error) {
 	return nil, nil
 }
 
-func isOsExitFunc(expr *ast.ExprStmt, ignore token.Pos) bool {
+func isOsExitFunc(expr *ast.ExprStmt) bool {
 	call, ok := expr.X.(*ast.CallExpr)
 	if !ok {
 		return false

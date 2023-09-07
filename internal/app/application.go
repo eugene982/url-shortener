@@ -34,27 +34,6 @@ type Application struct {
 	stopDelChan  chan struct{}
 }
 
-// // NewApplication функция-конструктор приложения.
-// func NewApplication(shortener shortener.Shortener,
-// 	store storage.Storage, baseURL string) (*Application, error) {
-
-// 	if !strings.HasSuffix(baseURL, "/") {
-// 		baseURL += "/"
-// 	}
-
-// 	app := &Application{
-// 		shortener:    shortener,
-// 		store:        store,
-// 		baseURL:      baseURL,
-// 		delShortChan: make(chan deleteUserData, delShortChanSize),
-// 	}
-
-// 	app.stopDelChan = make(chan struct{})
-// 	go app.startDeletionShortUrls()
-
-// 	return app, nil
-// }
-
 func New(conf config.Configuration) (*Application, error) {
 	var (
 		app Application
@@ -92,16 +71,16 @@ func New(conf config.Configuration) (*Application, error) {
 
 	// Установим таймауты, вдруг соединение будет нестабильным
 	app.server = &http.Server{
-		ReadTimeout:  time.Duration(conf.Timeout) * time.Second,
-		WriteTimeout: time.Duration(conf.Timeout) * time.Second,
+		ReadTimeout:  conf.Timeout,
+		WriteTimeout: conf.Timeout,
 		Addr:         conf.ServAddr,
 		Handler:      NewRouter(&app),
 	}
 
 	// Установим сервер сбора отладочной информации
 	app.profServer = &http.Server{
-		ReadTimeout:  time.Duration(conf.Timeout) * time.Second,
-		WriteTimeout: time.Duration(conf.Timeout) * time.Second,
+		ReadTimeout:  conf.Timeout,
+		WriteTimeout: conf.Timeout,
 		Addr:         conf.ProfAddr,
 		Handler:      newProfRouter(),
 	}

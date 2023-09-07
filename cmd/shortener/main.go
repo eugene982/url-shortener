@@ -58,7 +58,7 @@ func run() error {
 		return err
 	}
 
-	// запуск gприложения в горутине
+	// запуск приложения в горутине
 	srvErr := make(chan error)
 	go func() {
 		srvErr <- application.Start()
