@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgerrcode"
@@ -12,6 +13,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 
+	"github.com/eugene982/url-shortener/internal/logger"
 	"github.com/eugene982/url-shortener/internal/model"
 	"github.com/eugene982/url-shortener/internal/storage"
 )
@@ -42,17 +44,17 @@ func New(db *sqlx.DB) (*PgxStore, error) {
 	return &PgxStore{db}, nil
 }
 
-// Закрытие соединения
+// Close Закрытие соединения
 func (p *PgxStore) Close() error {
 	return p.db.Close()
 }
 
-// Пинг к базе
+// Ping Пинг к базе
 func (p *PgxStore) Ping(ctx context.Context) error {
 	return p.db.PingContext(ctx)
 }
 
-// Запрос полного адреса у базы по короткой ссылке
+// GetAddr Запрос полного адреса у базы по короткой ссылке
 func (p *PgxStore) GetAddr(ctx context.Context, short string) (data model.StoreData, err error) {
 	query := `
 		SELECT * FROM address 
@@ -68,13 +70,17 @@ func (p *PgxStore) GetAddr(ctx context.Context, short string) (data model.StoreD
 	return res, nil
 }
 
-// Установка уникального соответствия
+// Set Установка уникального соответствия
 func (p *PgxStore) Set(ctx context.Context, data model.StoreData) error {
 	tx, err := p.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			logger.Error(fmt.Errorf("psql rollbacck error: %w", err))
+		}
+	}()
 
 	query := `
 		INSERT INTO address (origin_url, short_url, user_id, is_deleted) 
@@ -89,7 +95,7 @@ func (p *PgxStore) Set(ctx context.Context, data model.StoreData) error {
 	return tx.Commit()
 }
 
-// Записть в базу соответствия между адресом и короткой ссылкой
+// Update Записть в базу соответствия между адресом и короткой ссылкой
 func (p *PgxStore) Update(ctx context.Context, list []model.StoreData) error {
 	if len(list) == 0 {
 		return nil
@@ -99,7 +105,11 @@ func (p *PgxStore) Update(ctx context.Context, list []model.StoreData) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			logger.Error(fmt.Errorf("psql rollbacck error: %w", err))
+		}
+	}()
 
 	stmt, err := tx.PrepareNamedContext(ctx, `
 		INSERT INTO address 
@@ -124,7 +134,7 @@ func (p *PgxStore) Update(ctx context.Context, list []model.StoreData) error {
 	return tx.Commit()
 }
 
-// Получение данных пользователя
+// GetUserURLs Получение данных пользователя
 func (p *PgxStore) GetUserURLs(ctx context.Context, userID string) ([]model.StoreData, error) {
 	res := make([]model.StoreData, 0)
 
@@ -140,7 +150,7 @@ func (p *PgxStore) GetUserURLs(ctx context.Context, userID string) ([]model.Stor
 	return res, nil
 }
 
-// Удаление указанных сокращённых ссылок
+// DeleteShort Удаление указанных сокращённых ссылок
 func (p *PgxStore) DeleteShort(ctx context.Context, shortURLs []string) error {
 	if len(shortURLs) == 0 {
 		return nil
@@ -150,7 +160,12 @@ func (p *PgxStore) DeleteShort(ctx context.Context, shortURLs []string) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	// успокаиваем линтер
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			logger.Error(fmt.Errorf("psql rollbacck error: %w", err))
+		}
+	}()
 
 	query, args, err := sqlx.In(`
 		UPDATE address SET is_deleted=TRUE  

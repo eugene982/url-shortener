@@ -2,9 +2,11 @@ package config
 
 import (
 	"flag"
+	"os"
 	"time"
 
 	"github.com/caarlos0/env/v8"
+	"github.com/eugene982/url-shortener/internal/logger"
 )
 
 // Configuration структура получения данных из командной строки и окружения.
@@ -34,6 +36,9 @@ func Config() Configuration {
 
 	// получаем конфигурацию из флагов и/или окружения
 	flag.Parse()
-	env.Parse(&config)
+	if err := env.Parse(&config); err != nil {
+		logger.Error(err)
+		os.Exit(1)
+	}
 	return config
 }

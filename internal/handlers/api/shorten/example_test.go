@@ -24,15 +24,6 @@ func ExampleNewShortenHandler() {
 	})
 	handler := NewShortenHandler(base, setter, shortener)
 
-	type want struct {
-		code     int
-		response string
-	}
-	type req struct {
-		body        string
-		contentType string
-	}
-
 	reqbody := strings.NewReader(`{"url":"ya.ru"}`)
 	r := httptest.NewRequest("POST", "/api/shorten", reqbody)
 	r.Header.Set("Content-Type", "application/json")

@@ -11,6 +11,9 @@ T_BIN_FLAG=-binary-path=$(BIN_PATH)
 T_SRC_FLAG=-source-path=$(SRC_PATH)
 T_DSN_FLAG=-database-dsn="postgres://test:test@localhost/url_shortener_test"
 
+gofmt:
+	gofmt -s -l . 	
+
 tests:
 	go test ./...
 
@@ -19,6 +22,9 @@ vet:
 
 staticcheck:
 	$(GOBIN)/staticcheck ./...
+
+golangci-lint:
+	$(GOBIN)/golangci-lint run ./...	
 
 buildlint:
 	go build -o=bin/staticlint cmd/staticlint/main.go 
@@ -85,3 +91,8 @@ test15:
 
 alltests: tests build test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11 test12 test13 test14 test15
 	@echo "all tests - PASS"
+
+gitlint: vet gofmt golangci-lint
+
+alllint: vet staticcheck gofmt golangci-lint buildlint lint
+	@echo "all lint - PASS" 

@@ -92,7 +92,12 @@ func New(conf config.Configuration) (*Application, error) {
 // Запуск прослушивания канала на удаление ссылок
 func (a *Application) Start() error {
 	go a.startDeletionShortUrls()
-	go a.profServer.ListenAndServe()
+	go func() {
+		err := a.profServer.ListenAndServe()
+		if err != nil {
+			logger.Error(fmt.Errorf("error start pprof server: %w", err))
+		}
+	}()
 	return a.server.ListenAndServe()
 }
 

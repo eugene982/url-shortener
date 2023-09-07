@@ -38,7 +38,10 @@ func TestUpdateAddr(t *testing.T) {
 			{OriginalURL: c.addr, ShortURL: c.short},
 		}
 
-		storage.Update(ctx, data)
+		err = storage.Update(ctx, data)
+		if err != nil {
+			t.Error(err)
+		}
 
 		get, err := storage.GetAddr(ctx, c.short)
 		if err != nil {
@@ -64,15 +67,21 @@ func BenchmarkGetAddr(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	storage.Set(ctx, model.StoreData{
+	err = storage.Set(ctx, model.StoreData{
 		OriginalURL: addr,
 		ShortURL:    addr,
 	})
+	if err != nil {
+		b.Fatal(err)
+	}
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		storage.GetAddr(ctx, addr)
+		_, err = storage.GetAddr(ctx, addr)
+		if err != nil {
+			b.Fatal(err)
+		}
 	}
 
 }
@@ -82,7 +91,7 @@ func BenchmarkUpdate(b *testing.B) {
 	var (
 		ctx  = context.Background()
 		list = []model.StoreData{
-			model.StoreData{
+			{
 				OriginalURL: "http://yandex.ru",
 				ShortURL:    "http://yandex.ru",
 			},
@@ -97,7 +106,10 @@ func BenchmarkUpdate(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		storage.Update(ctx, list)
+		err = storage.Update(ctx, list)
+		if err != nil {
+			b.Error(err)
+		}
 	}
 }
 
@@ -113,7 +125,7 @@ func BenchmarkGetUserURLs(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	storage.Update(ctx, []model.StoreData{
+	err = storage.Update(ctx, []model.StoreData{
 		{
 			UserID:      userID,
 			OriginalURL: "http://yandex.ru",
@@ -125,11 +137,17 @@ func BenchmarkGetUserURLs(b *testing.B) {
 			ShortURL:    "http://google.com",
 		},
 	})
+	if err != nil {
+		b.Fatal(err)
+	}
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		storage.GetUserURLs(ctx, userID)
+		// успокаиваем линтер
+		_, err := storage.GetUserURLs(ctx, userID)
+		if err != nil {
+			b.Error(err)
+		}
 	}
-
 }
