@@ -50,14 +50,20 @@ func BenchmarkShort(b *testing.B) {
 	b.Run("ya", func(b *testing.B) {
 		addr := "https://yandex.ru/search/?text=go+benchmark"
 		for i := 0; i < b.N; i++ {
-			shortener.Short(addr)
+			_, err := shortener.Short(addr)
+			if err != nil {
+				b.Error(err)
+			}
 		}
 	})
 
 	b.Run("google", func(b *testing.B) {
 		addr := "https://www.google.com/search?q=go+benchmark&oq=go+benchmark"
 		for i := 0; i < b.N; i++ {
-			shortener.Short(addr)
+			_, err := shortener.Short(addr)
+			if err != nil {
+				b.Error(err)
+			}
 		}
 	})
 }

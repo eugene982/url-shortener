@@ -42,6 +42,10 @@ func NewCreateShortHandler(b handlers.BaseURLGetter, setter handlers.Setter, sh 
 			return
 		}
 
-		io.WriteString(w, b.GetBaseURL()+short)
+		// linter
+		if _, err := io.WriteString(w, b.GetBaseURL()+short); err != nil {
+			logger.Error(err)
+			http.NotFound(w, r)
+		}
 	}
 }

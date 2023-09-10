@@ -3,7 +3,9 @@ package app
 import (
 	"context"
 	"testing"
+	"time"
 
+	"github.com/eugene982/url-shortener/internal/config"
 	"github.com/eugene982/url-shortener/internal/model"
 	"github.com/eugene982/url-shortener/internal/storage"
 	"github.com/stretchr/testify/assert"
@@ -39,7 +41,17 @@ func (m mokShorter) Short(s string) (string, error) { return m(s) }
 // Тесты
 
 func newTestApp(t *testing.T) *Application {
-	st := mokStore{
+	conf := config.Configuration{
+		ServAddr: "localhost:8080",
+		ProfAddr: "localhost:8081",
+	}
+
+	a, err := New(conf)
+	require.NotNil(t, a)
+	require.NoError(t, err)
+
+	a.shortener = mokShorter(func(addr string) (string, error) { return addr, nil })
+	a.store = mokStore{
 		updFunc: func(_ ...model.StoreData) error { return nil },
 		getAddrFunc: func(short string) (data model.StoreData, err error) {
 			if short == "" {
@@ -53,11 +65,6 @@ func newTestApp(t *testing.T) *Application {
 			return []model.StoreData{}, nil
 		},
 	}
-	sh := mokShorter(func(addr string) (string, error) { return addr, nil })
-
-	a, err := NewApplication(sh, st, "")
-	require.NotNil(t, a)
-	require.NoError(t, err)
 
 	return a
 }
@@ -66,6 +73,13 @@ func TestNewApplication(t *testing.T) {
 	a := newTestApp(t)
 	assert.IsType(t, &Application{}, a)
 
-	err := a.Close()
+	go func() {
+		err := a.Start()
+		require.NoError(t, err)
+	}()
+
+	time.Sleep(time.Second)
+
+	err := a.Stop()
 	require.NoError(t, err)
 }
