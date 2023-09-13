@@ -17,7 +17,8 @@ type Configuration struct {
 	LogLevel        string        `env:"LOG_LEVEL"` // уровень логирования
 	FileStoragePath string        `env:"FILE_STORAGE_PATH"`
 	DatabaseDSN     string        `env:"DATABASE_DSN"`
-	ProfAddr        string
+	ProfAddr        string        `env:"PPROF_ADDRESS"`
+	EnableHTTPS     bool          `env:"ENABLE_HTTPS"`
 }
 
 var config Configuration
@@ -30,9 +31,12 @@ func Config() Configuration {
 	flag.DurationVar(&config.Timeout, "t", 30*time.Second, "server timeout")
 	flag.StringVar(&config.LogLevel, "l", "info", "log level")
 	flag.StringVar(&config.FileStoragePath, "f", "/tmp/short-url-db.json", "file storage path")
+
 	flag.StringVar(&config.DatabaseDSN, "d", "", "postgres connection string")
 	//flag.StringVar(&config.DatabaseDSN, "d", "postgres://test:test@localhost/url_shorten", "postgres connection string")
+
 	flag.StringVar(&config.ProfAddr, "p", ":8081", "pprof server address")
+	flag.BoolVar(&config.EnableHTTPS, "s", false, "enable HTTPS")
 
 	// получаем конфигурацию из флагов и/или окружения
 	flag.Parse()
