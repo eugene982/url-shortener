@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"flag"
 	"os"
 	"time"
@@ -21,10 +22,20 @@ type Configuration struct {
 	EnableHTTPS     bool          `env:"ENABLE_HTTPS"`
 }
 
+// JSONConfiguration структура файла конфигурации
+type JSONConfiguration struct {
+	ServAddr        *string `json:"server_address,omitempty"`
+	BaseURL         *string `json:"base_url,omitempty"`
+	FileStoragePath *string `json:"file_storage_path,omitempty"`
+	DatabaseDSN     *string `json:"database_dsn,omitempty"`
+	EnableHTTPS     *bool   `json:"enable_https,omitempty"`
+}
+
 var config Configuration
 
 // Config возвращаем копию конфигурации полученную из флагов и окружения.
 func Config() Configuration {
+
 	// устанавливаем переменные для флага по умолчанию
 	flag.StringVar(&config.ServAddr, "a", ":8080", "server address")
 	flag.StringVar(&config.BaseURL, "b", "http://localhost:8080", "base address")
@@ -38,11 +49,71 @@ func Config() Configuration {
 	flag.StringVar(&config.ProfAddr, "p", ":8081", "pprof server address")
 	flag.BoolVar(&config.EnableHTTPS, "s", false, "enable HTTPS")
 
-	// получаем конфигурацию из флагов и/или окружения
+	// файл конфигурации
+	var jsonConf string
+	flag.StringVar(&jsonConf, "c", "", "json config file")
+
+	// получаем конфигурацию из флагов
 	flag.Parse()
+
+	// поищем путь и в переменных окружения
+	if jsonConf == "" {
+		jsonConf = os.Getenv("CONFIG")
+	}
+	if _, err := decodeJsonConfigFile(jsonConf); err != nil {
+		logger.Error(err)
+		os.Exit(1)
+	}
+
+	// получаем конфигурацию из окружения
 	if err := env.Parse(&config); err != nil {
 		logger.Error(err)
 		os.Exit(1)
 	}
+
 	return config
+}
+
+func decodeJsonConfigFile(fname string) (bool, error) {
+	if fname == "" {
+		return false, nil
+	}
+
+	f, err := os.Open(fname)
+	if err != nil {
+		return false, err
+	}
+
+	var conf JSONConfiguration
+	if err := json.NewDecoder(f).Decode(&conf); err != nil {
+		return false, err
+	}
+
+	// Проверка наличия флага
+	findFlag := func(name string) bool {
+		var found bool
+		flag.Visit(func(f *flag.Flag) {
+			if f.Name == name {
+				found = true
+			}
+		})
+		return found
+	}
+
+	if conf.ServAddr != nil && !findFlag("a") {
+		config.ServAddr = *conf.ServAddr
+	}
+	if conf.BaseURL != nil && !findFlag("b") {
+		config.BaseURL = *conf.BaseURL
+	}
+	if conf.FileStoragePath != nil && !findFlag("f") {
+		config.FileStoragePath = *conf.FileStoragePath
+	}
+	if conf.DatabaseDSN != nil && !findFlag("d") {
+		config.DatabaseDSN = *conf.DatabaseDSN
+	}
+	if conf.EnableHTTPS != nil && !findFlag("s") {
+		config.EnableHTTPS = *conf.EnableHTTPS
+	}
+	return true, nil
 }
