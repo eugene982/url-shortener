@@ -90,29 +90,26 @@ func decodeJsonConfigFile(fname string) (bool, error) {
 	}
 
 	// Проверка наличия флага
-	findFlag := func(name string) bool {
-		var found bool
-		flag.Visit(func(f *flag.Flag) {
-			if f.Name == name {
-				found = true
-			}
-		})
-		return found
-	}
+	// Необходимо исключить флаги установленные по умолчанию
+	// и имеющиеся в файле
+	hasFlag := make(map[string]bool)
+	flag.Visit(func(f *flag.Flag) {
+		hasFlag[f.Name] = true
+	})
 
-	if conf.ServAddr != nil && !findFlag("a") {
+	if conf.ServAddr != nil && !hasFlag["a"] {
 		config.ServAddr = *conf.ServAddr
 	}
-	if conf.BaseURL != nil && !findFlag("b") {
+	if conf.BaseURL != nil && !hasFlag["b"] {
 		config.BaseURL = *conf.BaseURL
 	}
-	if conf.FileStoragePath != nil && !findFlag("f") {
+	if conf.FileStoragePath != nil && !hasFlag["f"] {
 		config.FileStoragePath = *conf.FileStoragePath
 	}
-	if conf.DatabaseDSN != nil && !findFlag("d") {
+	if conf.DatabaseDSN != nil && !hasFlag["d"] {
 		config.DatabaseDSN = *conf.DatabaseDSN
 	}
-	if conf.EnableHTTPS != nil && !findFlag("s") {
+	if conf.EnableHTTPS != nil && !hasFlag["s"] {
 		config.EnableHTTPS = *conf.EnableHTTPS
 	}
 	return true, nil

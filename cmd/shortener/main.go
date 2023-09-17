@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/eugene982/url-shortener/internal/app"
@@ -43,7 +44,7 @@ func main() {
 func run() error {
 
 	// захват прерывания процесса
-	ctxInterrupt, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctxInterrupt, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
 	defer stop()
 
 	conf := config.Config()
