@@ -20,6 +20,7 @@ type Configuration struct {
 	DatabaseDSN     string        `env:"DATABASE_DSN"`
 	ProfAddr        string        `env:"PPROF_ADDRESS"`
 	EnableHTTPS     bool          `env:"ENABLE_HTTPS"`
+	ConfigFile      string        `env:"CONFIG"`
 }
 
 // JSONConfiguration структура файла конфигурации
@@ -50,19 +51,17 @@ func Config() Configuration {
 	flag.BoolVar(&config.EnableHTTPS, "s", false, "enable HTTPS")
 
 	// файл конфигурации
-	var jsonConf string
-	flag.StringVar(&jsonConf, "c", "", "json config file")
+	flag.StringVar(&config.ConfigFile, "c", "", "json config file")
 
 	// получаем конфигурацию из флагов
 	flag.Parse()
 
 	// поищем путь и в переменных окружения
-	if jsonConf == "" {
-		jsonConf = os.Getenv("CONFIG")
-	}
-	if _, err := decodeJsonConfigFile(jsonConf); err != nil {
-		logger.Error(err)
-		os.Exit(1)
+	if config.ConfigFile != "" {
+		if err := decodeJsonConfigFile(config.ConfigFile); err != nil {
+			logger.Error(err)
+			os.Exit(1)
+		}
 	}
 
 	// получаем конфигурацию из окружения
@@ -70,23 +69,18 @@ func Config() Configuration {
 		logger.Error(err)
 		os.Exit(1)
 	}
-
 	return config
 }
 
-func decodeJsonConfigFile(fname string) (bool, error) {
-	if fname == "" {
-		return false, nil
-	}
-
+func decodeJsonConfigFile(fname string) error {
 	f, err := os.Open(fname)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	var conf JSONConfiguration
 	if err := json.NewDecoder(f).Decode(&conf); err != nil {
-		return false, err
+		return err
 	}
 
 	// Проверка наличия флага
@@ -112,5 +106,5 @@ func decodeJsonConfigFile(fname string) (bool, error) {
 	if conf.EnableHTTPS != nil && !hasFlag["s"] {
 		config.EnableHTTPS = *conf.EnableHTTPS
 	}
-	return true, nil
+	return nil
 }
