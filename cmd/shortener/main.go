@@ -47,9 +47,12 @@ func run() error {
 	ctxInterrupt, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
 	defer stop()
 
-	conf := config.Config()
+	conf, err := config.Config()
+	if err != nil {
+		return err
+	}
 
-	err := zaplogger.Initialize(conf.LogLevel)
+	err = zaplogger.Initialize(conf.LogLevel)
 	if err != nil {
 		return err
 	}

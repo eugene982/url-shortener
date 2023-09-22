@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v8"
-	"github.com/eugene982/url-shortener/internal/logger"
 )
 
 // Configuration структура получения данных из командной строки и окружения.
@@ -35,7 +34,7 @@ type JSONConfiguration struct {
 var config Configuration
 
 // Config возвращаем копию конфигурации полученную из флагов и окружения.
-func Config() Configuration {
+func Config() (Configuration, error) {
 
 	// устанавливаем переменные для флага по умолчанию
 	flag.StringVar(&config.ServAddr, "a", ":8080", "server address")
@@ -59,17 +58,15 @@ func Config() Configuration {
 	// поищем путь и в переменных окружения
 	if config.ConfigFile != "" {
 		if err := decodeJsonConfigFile(config.ConfigFile); err != nil {
-			logger.Error(err)
-			os.Exit(1)
+			return Configuration{}, err
 		}
 	}
 
 	// получаем конфигурацию из окружения
 	if err := env.Parse(&config); err != nil {
-		logger.Error(err)
-		os.Exit(1)
+		return Configuration{}, err
 	}
-	return config
+	return config, nil
 }
 
 func decodeJsonConfigFile(fname string) error {
@@ -86,24 +83,24 @@ func decodeJsonConfigFile(fname string) error {
 	// Проверка наличия флага
 	// Необходимо исключить флаги установленные по умолчанию
 	// и имеющиеся в файле
-	hasFlag := make(map[string]bool)
+	reserve := make(map[string]bool)
 	flag.Visit(func(f *flag.Flag) {
-		hasFlag[f.Name] = true
+		reserve[f.Name] = true
 	})
 
-	if conf.ServAddr != nil && !hasFlag["a"] {
+	if conf.ServAddr != nil && !reserve["a"] {
 		config.ServAddr = *conf.ServAddr
 	}
-	if conf.BaseURL != nil && !hasFlag["b"] {
+	if conf.BaseURL != nil && !reserve["b"] {
 		config.BaseURL = *conf.BaseURL
 	}
-	if conf.FileStoragePath != nil && !hasFlag["f"] {
+	if conf.FileStoragePath != nil && !reserve["f"] {
 		config.FileStoragePath = *conf.FileStoragePath
 	}
-	if conf.DatabaseDSN != nil && !hasFlag["d"] {
+	if conf.DatabaseDSN != nil && !reserve["d"] {
 		config.DatabaseDSN = *conf.DatabaseDSN
 	}
-	if conf.EnableHTTPS != nil && !hasFlag["s"] {
+	if conf.EnableHTTPS != nil && !reserve["s"] {
 		config.EnableHTTPS = *conf.EnableHTTPS
 	}
 	return nil

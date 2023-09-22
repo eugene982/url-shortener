@@ -18,6 +18,12 @@ import (
 	"github.com/eugene982/url-shortener/internal/storage"
 )
 
+const (
+	maxOpenConns    = 3               // максимум открытых соединений
+	maxIdleConns    = 3               // максимум ожидающих соединений
+	connMaxLifetime = time.Minute * 3 // таймаут ожидания соединния перед закрытием
+)
+
 type PgxStore struct {
 	db *sqlx.DB
 }
@@ -25,7 +31,7 @@ type PgxStore struct {
 // Утверждение типа, ошибка компиляции
 var _ storage.Storage = (*PgxStore)(nil)
 
-// Функция конструктор
+// New Функция-конструктор
 func New(db *sqlx.DB) (*PgxStore, error) {
 	err := db.Ping()
 	if err != nil {
@@ -37,9 +43,9 @@ func New(db *sqlx.DB) (*PgxStore, error) {
 	}
 
 	// Настройка пула соединений
-	db.SetMaxOpenConns(3)
-	db.SetMaxIdleConns(3)
-	db.SetConnMaxLifetime(3 * time.Minute)
+	db.SetMaxOpenConns(maxOpenConns)
+	db.SetMaxIdleConns(maxIdleConns)
+	db.SetConnMaxLifetime(connMaxLifetime)
 
 	return &PgxStore{db}, nil
 }
