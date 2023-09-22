@@ -8,13 +8,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jmoiron/sqlx"
+	"golang.org/x/crypto/acme/autocert"
+
 	"github.com/eugene982/url-shortener/internal/config"
 	"github.com/eugene982/url-shortener/internal/logger"
 	"github.com/eugene982/url-shortener/internal/shortener"
 	"github.com/eugene982/url-shortener/internal/storage"
 	"github.com/eugene982/url-shortener/internal/storage/memstore"
 	"github.com/eugene982/url-shortener/internal/storage/pgxstore"
-	"github.com/jmoiron/sqlx"
 )
 
 const (
@@ -77,6 +79,19 @@ func New(conf config.Configuration) (*Application, error) {
 		Handler:      NewRouter(&app),
 	}
 
+	if conf.EnableHTTPS {
+		// конструируем менеджер TLS-сертификатов
+		manager := &autocert.Manager{
+			// директория хранения сертификатов
+			Cache: autocert.DirCache("cache-dir"),
+			// функция, принимающая Terms of Service издателя сертификатов
+			Prompt: autocert.AcceptTOS,
+			// перечень документов, для которых будут поддерживаться сертификаты
+			HostPolicy: autocert.HostWhitelist("shortener.ru", "www.shortener.ru"),
+		}
+		app.server.TLSConfig = manager.TLSConfig()
+	}
+
 	// Установим сервер сбора отладочной информации
 	app.profServer = &http.Server{
 		ReadTimeout:  conf.Timeout,
@@ -98,6 +113,9 @@ func (a *Application) Start() error {
 			logger.Error(fmt.Errorf("error start pprof server: %w", err))
 		}
 	}()
+	if a.server.TLSConfig != nil {
+		return a.server.ListenAndServeTLS("", "")
+	}
 	return a.server.ListenAndServe()
 }
 

@@ -36,3 +36,6 @@ pprof/
 
 #scripts
 scripts/
+
+#certificate
+cert/
