@@ -1,4 +1,4 @@
-BUILD_VERSION="v1.23.0"
+BUILD_VERSION="v1.23.1"
 BUILD_DATE=$(shell date +"%Y/%m/%d %H:%M")
 BUILD_COMMIT=$(shell git rev-parse HEAD)
 
