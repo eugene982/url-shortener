@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test(t *testing.T) {
+func TestJsonConfig(t *testing.T) {
 	testdata, err := filepath.Abs("testdata")
 	require.NoError(t, err)
 
@@ -26,4 +26,9 @@ func Test(t *testing.T) {
 	assert.Equal(t, "/path/to/file.db", config.FileStoragePath)
 	assert.Equal(t, "postgres://", config.DatabaseDSN)
 	assert.Equal(t, true, config.EnableHTTPS)
+}
+
+func TestConfig(t *testing.T) {
+	_, err := Config()
+	require.NoError(t, err)
 }
