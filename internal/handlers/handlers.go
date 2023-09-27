@@ -46,6 +46,11 @@ type Updater interface {
 	Update(ctx context.Context, list []model.StoreData) error
 }
 
+// StatsGetter интерфейс получения сведений о статистике
+type StatsGetter interface {
+	Stats(ctx context.Context) (URLs int, users int, err error)
+}
+
 // CheckContentType проверка заголовка запроса на формат.
 func CheckContentType(value string, r *http.Request) (bool, error) {
 	if strings.Contains(r.Header.Get("Content-Type"), value) {

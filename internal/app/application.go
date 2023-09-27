@@ -27,13 +27,14 @@ const (
 
 // Application основное приложение
 type Application struct {
-	shortener    shortener.Shortener
-	store        storage.Storage
-	baseURL      string
-	server       *http.Server
-	profServer   *http.Server
-	delShortChan chan deleteUserData
-	stopDelChan  chan struct{}
+	shortener     shortener.Shortener
+	store         storage.Storage
+	baseURL       string
+	server        *http.Server
+	profServer    *http.Server
+	delShortChan  chan deleteUserData
+	stopDelChan   chan struct{}
+	trustedSubnet string
 }
 
 func New(conf config.Configuration) (*Application, error) {
@@ -66,6 +67,7 @@ func New(conf config.Configuration) (*Application, error) {
 		logger.Info("new memstore", "file", conf.FileStoragePath)
 	}
 
+	app.trustedSubnet = conf.TrustedSubnet
 	app.shortener = shortener.NewSimpleShortener()
 
 	app.stopDelChan = make(chan struct{})

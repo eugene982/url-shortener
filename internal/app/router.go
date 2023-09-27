@@ -10,6 +10,7 @@ import (
 	"github.com/eugene982/url-shortener/internal/logger"
 	"github.com/eugene982/url-shortener/internal/middleware"
 
+	"github.com/eugene982/url-shortener/internal/handlers/api/intrnl/stats"
 	"github.com/eugene982/url-shortener/internal/handlers/api/shorten"
 	"github.com/eugene982/url-shortener/internal/handlers/api/shorten/batch"
 	"github.com/eugene982/url-shortener/internal/handlers/api/user/urls"
@@ -37,6 +38,11 @@ func NewRouter(a *Application) http.Handler {
 
 	r.Get("/api/user/urls", urls.NewUserURLsHandler(a, a.store))
 	r.Delete("/api/user/urls", urls.NewDeleteURLsHandlers(a))
+
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.TrustedSubnet(a.trustedSubnet).Serve)
+		r.Get("/api/internal/stats", stats.NewStatsHandler(a.store))
+	})
 
 	// во всех остальных случаях 404
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {

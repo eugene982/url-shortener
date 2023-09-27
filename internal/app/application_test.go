@@ -16,6 +16,7 @@ type mokStore struct {
 	getAddrFunc     func(string) (model.StoreData, error)
 	updFunc         func(d ...model.StoreData) error
 	getUserURLsFunc func() ([]model.StoreData, error)
+	getStats        func() (int, int, error)
 }
 
 func (m mokStore) GetAddr(_ context.Context, s string) (model.StoreData, error) {
@@ -27,11 +28,11 @@ func (m mokStore) Set(_ context.Context, d model.StoreData) error {
 func (m mokStore) GetUserURLs(_ context.Context, userID string) ([]model.StoreData, error) {
 	return m.getUserURLsFunc()
 }
-func (m mokStore) DeleteShort(ctx context.Context, shortURLs []string) error { return nil }
-
-func (m mokStore) Update(_ context.Context, ls []model.StoreData) error { return m.updFunc(ls...) }
-func (mokStore) Ping(context.Context) error                             { return nil }
-func (mokStore) Close() error                                           { return nil }
+func (m mokStore) DeleteShort(ctx context.Context, shortURLs []string) error  { return nil }
+func (m mokStore) Stats(ctx context.Context) (URLs int, users int, err error) { return m.getStats() }
+func (m mokStore) Update(_ context.Context, ls []model.StoreData) error       { return m.updFunc(ls...) }
+func (mokStore) Ping(context.Context) error                                   { return nil }
+func (mokStore) Close() error                                                 { return nil }
 
 // простой сокращатель
 type mokShorter func(string) (string, error)
