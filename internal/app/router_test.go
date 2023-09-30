@@ -147,9 +147,9 @@ func TestRouterHandlerCreateAddr(t *testing.T) {
 	}
 
 	app := newTestApp(t)
+	app.baseURL = "localhost/"
 
 	ts := httptest.NewServer(NewRouter(app))
-	app.baseURL = ts.URL + "/"
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -164,7 +164,7 @@ func TestRouterHandlerCreateAddr(t *testing.T) {
 			require.NoError(t, err)
 
 			if tt.want.code == 201 {
-				assert.Equal(t, ts.URL+tt.want.body, string(body))
+				assert.Equal(t, "localhost"+tt.want.body, string(body))
 			} else {
 				assert.Equal(t, tt.want.body, string(body))
 			}
@@ -235,7 +235,7 @@ func TestRouterHandlerApiShorten(t *testing.T) {
 func TestGzipCompression(t *testing.T) {
 	app := newTestApp(t)
 
-	h := shorten.NewShortenHandler(app, app.store, app.shortener)
+	h := shorten.NewShortenHandler("/", app.store, app.shortener)
 
 	handler := http.Handler(middleware.Auth(
 		middleware.Gzip(http.HandlerFunc(h))))

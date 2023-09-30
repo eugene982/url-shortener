@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package rpc_shortener;
+
+option go_package = "url-shortener/proto";
+
+// Ping
+message PingRequest {    
+}
+
+message PingResponse {
+    string message = 1;
+}
+
+// FindAddr
+message FindAddrRequest {
+    string short_url = 1;
+}
+
+message FindAddrResponse {
+    string original_url = 1;
+    string error        = 2;
+}
+
+// CreateShort
+message CreateShortRequest {
+    string user         = 1;
+    string original_url = 2;
+}
+
+message CreateShortResponse {
+    string short_url = 1;
+    string error     = 2;
+}
+
+// Batch
+message BatchRequest {
+    message Batch {
+        string correlation_id = 1;
+        string original_url   = 2;
+    }
+    string user            = 1;
+    repeated Batch request = 2; 
+}
+
+message BatchResponse {
+    message Batch {
+        string correlation_id = 1;
+        string short_url      = 2;
+    }
+    repeated Batch responce = 1;
+    string error            = 2;
+}
+
+// UserURLs
+message UserURLsRequest {
+    string user = 1;
+}
+
+message UserURLsResponse {
+    message UserURL{
+        string original_url = 1;
+        string short_url    = 2;
+    }
+    repeated UserURL response = 1;
+    string error = 2;
+}
+
+// Del user urls
+message DelUserURLsRequest {
+    string user               = 1;
+    repeated string short_url = 2;    
+}
+
+message DelUserURLsResponse {
+    string error = 1;  
+}
+
+service Shortener {
+    rpc Ping(PingRequest) returns (PingResponse);
+    rpc FindAddr(FindAddrRequest) returns (FindAddrResponse);
+    rpc CreateShort(CreateShortRequest) returns (CreateShortResponse);
+    rpc BatchShort(BatchRequest) returns (BatchResponse);
+    rpc GetUserURLs(UserURLsRequest) returns (UserURLsResponse);
+    rpc DelUserURLs(DelUserURLsRequest) returns (DelUserURLsResponse);
+}
+

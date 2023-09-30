@@ -1,4 +1,4 @@
-// Пакет приложения
+// Package app gприложение
 package app
 
 import (
@@ -35,6 +35,7 @@ type Application struct {
 	delShortChan  chan deleteUserData
 	stopDelChan   chan struct{}
 	trustedSubnet string
+	grpcServer    *GRPCServer
 }
 
 func New(conf config.Configuration) (*Application, error) {
@@ -102,6 +103,12 @@ func New(conf config.Configuration) (*Application, error) {
 		Handler:      newProfRouter(),
 	}
 
+	// Настраиваем gRPC-сервер
+	app.grpcServer, err = NewGRPCServer(&app, conf.GRPCAddr)
+	if err != nil {
+		return nil, err
+	}
+
 	return &app, nil
 }
 
@@ -115,6 +122,14 @@ func (a *Application) Start() error {
 			logger.Error(fmt.Errorf("error start pprof server: %w", err))
 		}
 	}()
+
+	go func() {
+		err := a.grpcServer.Start()
+		if err != nil {
+			logger.Error(fmt.Errorf("error start gRPC server: %w", err))
+		}
+	}()
+
 	if a.server.TLSConfig != nil {
 		return a.server.ListenAndServeTLS("", "")
 	}

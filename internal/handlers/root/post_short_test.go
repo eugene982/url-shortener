@@ -77,9 +77,7 @@ func TestCreateShortHandler(t *testing.T) {
 			r := httptest.NewRequest("GET", "/", strings.NewReader(tcase.body))
 			w := httptest.NewRecorder()
 
-			base := baseURLGetterFunc(func() string {
-				return "/"
-			})
+			base := "/"
 
 			setter := setterFunc(func() error {
 				if tcase.want.code == 404 {

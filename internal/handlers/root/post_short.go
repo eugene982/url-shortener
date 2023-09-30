@@ -1,6 +1,7 @@
 package root
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -10,11 +11,12 @@ import (
 	"github.com/eugene982/url-shortener/internal/logger"
 	"github.com/eugene982/url-shortener/internal/shortener"
 	"github.com/eugene982/url-shortener/internal/storage"
+	"github.com/eugene982/url-shortener/proto"
 )
 
 // NewCreateShortHandler эндпоинт получения короткой ссылки.
 // Генерирование короткой ссылки и сохранеине её в хранилище.
-func NewCreateShortHandler(b handlers.BaseURLGetter, setter handlers.Setter, sh shortener.Shortener) http.HandlerFunc {
+func NewCreateShortHandler(baseURL string, setter handlers.Setter, sh shortener.Shortener) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
@@ -43,9 +45,25 @@ func NewCreateShortHandler(b handlers.BaseURLGetter, setter handlers.Setter, sh 
 		}
 
 		// linter
-		if _, err := io.WriteString(w, b.GetBaseURL()+short); err != nil {
+		if _, err := io.WriteString(w, baseURL+short); err != nil {
 			logger.Error(err)
 			http.NotFound(w, r)
 		}
+	}
+}
+
+// NewGRPCCreateShortHandler эндпоинт получения короткой ссылки grpc.
+func NewGRPCCreateShortHandler(baseURL string, setter handlers.Setter, sh shortener.Shortener) handlers.CreateShortHandler {
+
+	return func(ctx context.Context, in *proto.CreateShortRequest) (*proto.CreateShortResponse, error) {
+		var (
+			response proto.CreateShortResponse
+			err      error
+		)
+		response.ShortUrl, err = handlers.GetAndWriteUserShort(ctx, sh, setter, in.OriginalUrl, in.User)
+		if err != nil {
+			return nil, err
+		}
+		return &response, nil
 	}
 }

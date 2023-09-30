@@ -6,8 +6,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/eugene982/url-shortener/internal/handlers"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/eugene982/url-shortener/internal/handlers"
+	"github.com/eugene982/url-shortener/proto"
 )
 
 type PingerFunc func() error
@@ -40,6 +42,39 @@ func TestPingHandler(t *testing.T) {
 
 			NewPingHandler(pinger).ServeHTTP(w, r)
 			assert.Equal(t, tcase.wantStatus, w.Code)
+		})
+	}
+}
+
+func TestGRPCPingHandler(t *testing.T) {
+
+	tests := []struct {
+		name    string
+		wantErr bool
+	}{
+		{name: "ok", wantErr: false},
+		{name: "internal error", wantErr: true},
+	}
+
+	ctx := context.Background()
+
+	for _, tcase := range tests {
+		t.Run(tcase.name, func(t *testing.T) {
+
+			var pinger handlers.Pinger = PingerFunc(func() error {
+				if !tcase.wantErr {
+					return nil
+				} else {
+					return fmt.Errorf("mock ping error")
+				}
+			})
+
+			_, err := NewGRPCPingHandler(pinger)(ctx, &proto.PingRequest{})
+			if tcase.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }

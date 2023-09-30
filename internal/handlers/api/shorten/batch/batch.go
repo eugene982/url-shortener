@@ -1,6 +1,7 @@
 package batch
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -10,11 +11,12 @@ import (
 	"github.com/eugene982/url-shortener/internal/middleware"
 	"github.com/eugene982/url-shortener/internal/model"
 	"github.com/eugene982/url-shortener/internal/shortener"
+	"github.com/eugene982/url-shortener/proto"
 )
 
-// Генерирование короткой ссылки и сохранеине её во временном хранилище
+// NewBatchHandler Генерирование короткой ссылки и сохранеине её во временном хранилище
 // из запроса формата JSON
-func NewBatchHandler(b handlers.BaseURLGetter, u handlers.Updater, s shortener.Shortener) http.HandlerFunc {
+func NewBatchHandler(baseURL string, u handlers.Updater, s shortener.Shortener) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close() // Очищаем тело
 
@@ -35,7 +37,7 @@ func NewBatchHandler(b handlers.BaseURLGetter, u handlers.Updater, s shortener.S
 		}
 
 		// Получаем идентификатор пользователя из контекста
-		userID, err := middleware.GetUserID(r)
+		userID, err := middleware.GetUserID(r.Context())
 		if err != nil {
 			logger.Error(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -64,7 +66,7 @@ func NewBatchHandler(b handlers.BaseURLGetter, u handlers.Updater, s shortener.S
 
 			response = append(response, model.BatchResponse{
 				CorrelationID: batch.CorrelationID,
-				ShortURL:      b.GetBaseURL() + short,
+				ShortURL:      baseURL + short,
 			})
 
 			write = append(write, model.StoreData{
@@ -89,5 +91,58 @@ func NewBatchHandler(b handlers.BaseURLGetter, u handlers.Updater, s shortener.S
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+	}
+}
+
+// NewGRPCBatchHandler
+func NewGRPCBatchHandler(baseURL string, u handlers.Updater, s shortener.Shortener) handlers.BatchShortHandler {
+	return func(ctx context.Context, in *proto.BatchRequest) (*proto.BatchResponse, error) {
+		var response proto.BatchResponse
+
+		write := make([]model.StoreData, 0, len(in.Request)) // это положим в хранилище
+
+		for _, batch := range in.Request {
+			var err error
+
+			if batch.CorrelationId == "" {
+				response.Error = "correlation ID is empty"
+			}
+			if batch.OriginalUrl == "" {
+				response.Error = "original URL is empty"
+				logger.Warn("request is not valid",
+					"error", response.Error)
+			}
+			if response.Error != "" {
+				logger.Warn("request is not valid",
+					"error", response.Error)
+				return &response, nil
+			}
+
+			short, err := s.Short(batch.OriginalUrl)
+			if err != nil {
+				logger.Warn("error get short url",
+					"error", err)
+				return nil, err
+			}
+
+			response.Responce = append(response.Responce, &proto.BatchResponse_Batch{
+				CorrelationId: batch.CorrelationId,
+				ShortUrl:      baseURL + short,
+			})
+
+			write = append(write, model.StoreData{
+				ID:          batch.CorrelationId,
+				UserID:      in.User,
+				ShortURL:    short,
+				OriginalURL: batch.OriginalUrl,
+			})
+		}
+
+		if err := u.Update(ctx, write); err != nil {
+			logger.Error(fmt.Errorf("error write data in storage: %w", err))
+			return nil, err
+		}
+
+		return &response, nil
 	}
 }

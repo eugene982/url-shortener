@@ -9,12 +9,13 @@ import (
 	"github.com/eugene982/url-shortener/internal/middleware"
 	"github.com/eugene982/url-shortener/internal/model"
 	"github.com/eugene982/url-shortener/internal/shortener"
+	"github.com/eugene982/url-shortener/proto"
 )
 
 // BaseURLGetter интетрфейс получения основного адреса.
-type BaseURLGetter interface {
-	GetBaseURL() string
-}
+// type BaseURLGetter interface {
+// 	GetBaseURL() string
+// }
 
 // Pinger интерфейс проверки связи с сервисом.
 type Pinger interface {
@@ -62,12 +63,18 @@ func CheckContentType(value string, r *http.Request) (bool, error) {
 // GetAndWriteShort ищем или пытаемся создать короткую ссылку.
 func GetAndWriteShort(sh shortener.Shortener, setter Setter, addr string, r *http.Request) (string, error) {
 
-	short, err := sh.Short(addr)
+	userID, err := middleware.GetUserID(r.Context())
 	if err != nil {
 		return "", err
 	}
 
-	userID, err := middleware.GetUserID(r)
+	return GetAndWriteUserShort(r.Context(), sh, setter, userID, addr)
+}
+
+// GetAndWriteUserShort - запись пользовательской ссылки
+func GetAndWriteUserShort(ctx context.Context, sh shortener.Shortener, setter Setter, userID, addr string) (string, error) {
+
+	short, err := sh.Short(addr)
 	if err != nil {
 		return "", err
 	}
@@ -83,5 +90,14 @@ func GetAndWriteShort(sh shortener.Shortener, setter Setter, addr string, r *htt
 	}
 
 	// запись в файловое хранилище
-	return short, setter.Set(r.Context(), data)
+	return short, setter.Set(ctx, data)
 }
+
+// gRPC
+
+type PingHandler func(context.Context, *proto.PingRequest) (*proto.PingResponse, error)
+type FindAddrHandler func(context.Context, *proto.FindAddrRequest) (*proto.FindAddrResponse, error)
+type CreateShortHandler func(context.Context, *proto.CreateShortRequest) (*proto.CreateShortResponse, error)
+type BatchShortHandler func(context.Context, *proto.BatchRequest) (*proto.BatchResponse, error)
+type GetUserURLsHandler func(context.Context, *proto.UserURLsRequest) (*proto.UserURLsResponse, error)
+type DelUserURLsHandler func(context.Context, *proto.DelUserURLsRequest) (*proto.DelUserURLsResponse, error)

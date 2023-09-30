@@ -1,12 +1,14 @@
 package urls
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
 	"github.com/eugene982/url-shortener/internal/handlers"
 	"github.com/eugene982/url-shortener/internal/logger"
 	"github.com/eugene982/url-shortener/internal/middleware"
+	"github.com/eugene982/url-shortener/proto"
 )
 
 // NewDeleteURLsHandlers эндпоинт удаление ссылок пользователя.
@@ -32,7 +34,7 @@ func NewDeleteURLsHandlers(d handlers.UserShortAsyncDeleter) http.HandlerFunc {
 		}
 
 		// Получаем идентификатор пользователя из контекста
-		userID, err := middleware.GetUserID(r)
+		userID, err := middleware.GetUserID(r.Context())
 		if err != nil {
 			logger.Error(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -42,5 +44,13 @@ func NewDeleteURLsHandlers(d handlers.UserShortAsyncDeleter) http.HandlerFunc {
 		d.DeleteUserShortAsync(userID, request)
 
 		w.WriteHeader(http.StatusAccepted)
+	}
+}
+
+func NewGRPCDeleteURLsHandlers(d handlers.UserShortAsyncDeleter) handlers.DelUserURLsHandler {
+
+	return func(ctx context.Context, in *proto.DelUserURLsRequest) (*proto.DelUserURLsResponse, error) {
+		d.DeleteUserShortAsync(in.User, in.ShortUrl)
+		return &proto.DelUserURLsResponse{}, nil
 	}
 }

@@ -88,9 +88,7 @@ func TestBatchHandler(t *testing.T) {
 			r.Header.Set("Content-Type", tt.req.contentType)
 			w := httptest.NewRecorder()
 
-			base := func() string {
-				return "/"
-			}
+			base := "/"
 
 			shorten := func(s string) (string, error) {
 				return s, nil
@@ -102,7 +100,7 @@ func TestBatchHandler(t *testing.T) {
 
 			ru := middleware.RequestWithUserID(r, "user")
 
-			NewBatchHandler(baseURLGetterFunc(base), updaterFunc(updater),
+			NewBatchHandler(base, updaterFunc(updater),
 				shortenerFunc(shorten)).ServeHTTP(w, ru)
 			resp := w.Result()
 

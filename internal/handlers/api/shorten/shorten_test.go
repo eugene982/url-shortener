@@ -82,9 +82,7 @@ func TestRouterHandlerApiShorten(t *testing.T) {
 			r.Header.Set("Content-Type", tt.req.contentType)
 			w := httptest.NewRecorder()
 
-			base := baseURLGetterFunc(func() string {
-				return "/"
-			})
+			base := "/"
 
 			setter := setterFunc(func() error {
 				return nil

@@ -15,7 +15,7 @@ import (
 
 // NewShortenHandler эндпоинт получения коротких ссылок по списку.
 // Генерирование короткой ссылки и сохранеине её в хранилище из запроса формата JSON.
-func NewShortenHandler(b handlers.BaseURLGetter, setter handlers.Setter, sh shortener.Shortener) http.HandlerFunc {
+func NewShortenHandler(baseURL string, setter handlers.Setter, sh shortener.Shortener) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close() // Очищаем тело
 
@@ -64,7 +64,7 @@ func NewShortenHandler(b handlers.BaseURLGetter, setter handlers.Setter, sh shor
 		}
 
 		response := model.ResponseShorten{
-			Result: b.GetBaseURL() + short,
+			Result: baseURL + short,
 		}
 
 		w.WriteHeader(http.StatusCreated)

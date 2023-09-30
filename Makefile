@@ -94,3 +94,10 @@ test15:
 
 alltests: tests build test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11 test12 test13 test14 test15
 	@echo "all tests - PASS"
+
+# gRPC
+protoc: 
+	export PATH="$(PATH):$(shell go env GOPATH)/bin" && \
+	protoc --go_out=. --go_opt=paths=source_relative \
+	--go-grpc_out=. --go-grpc_opt=paths=source_relative \
+	proto/shortener.proto
