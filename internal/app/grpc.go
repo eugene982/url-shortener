@@ -65,11 +65,6 @@ func (s *GRPCServer) Start() error {
 	return s.server.Serve(s.listen)
 }
 
-func (s *GRPCServer) Close() error {
-	s.server.Stop()
-	return s.listen.Close()
-}
-
 func (s *protoServer) Ping(ctx context.Context, in *proto.PingRequest) (*proto.PingResponse, error) {
 	return s.pingHandler(ctx, in)
 }

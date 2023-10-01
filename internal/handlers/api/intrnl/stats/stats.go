@@ -30,7 +30,6 @@ func NewStatsHandler(s handlers.StatsGetter) http.HandlerFunc {
 		if err := json.NewEncoder(w).Encode(resp); err != nil {
 			logger.Error(fmt.Errorf("error encoding responce: %w", err))
 			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
 		}
 	}
 }

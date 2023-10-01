@@ -79,9 +79,29 @@ func TestNewApplication(t *testing.T) {
 		require.NoError(t, err)
 	}()
 	go a.startDeletionShortUrls()
+	a.DeleteUserShortAsync("user", []string{"ya.ru"})
 
 	time.Sleep(time.Second)
 
 	err := a.Stop()
 	require.NoError(t, err)
+}
+
+func TestNewApplicationHTTPS(t *testing.T) {
+	conf := config.Configuration{
+		EnableHTTPS: true,
+	}
+	a, err := New(conf)
+	require.NoError(t, err)
+
+	err = a.Start()
+	require.Error(t, err)
+}
+
+func TestNewApplicationDSN(t *testing.T) {
+	conf := config.Configuration{
+		DatabaseDSN: "postgres://...",
+	}
+	_, err := New(conf)
+	require.Error(t, err)
 }

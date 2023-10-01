@@ -27,6 +27,7 @@ bin
 
 #client
 cmd/client
+cmd/grpcclient
 
 #documentation
 doc/
