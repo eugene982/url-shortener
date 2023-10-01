@@ -56,14 +56,16 @@ func NewCreateShortHandler(baseURL string, setter handlers.Setter, sh shortener.
 func NewGRPCCreateShortHandler(baseURL string, setter handlers.Setter, sh shortener.Shortener) handlers.CreateShortHandler {
 
 	return func(ctx context.Context, in *proto.CreateShortRequest) (*proto.CreateShortResponse, error) {
-		var (
-			response proto.CreateShortResponse
-			err      error
-		)
-		response.ShortUrl, err = handlers.GetAndWriteUserShort(ctx, sh, setter, in.OriginalUrl, in.User)
-		if err != nil {
-			return nil, err
+		var response proto.CreateShortResponse
+
+		short, err := handlers.GetAndWriteUserShort(ctx, sh, setter, in.User, in.OriginalUrl)
+		if err == nil {
+			response.ShortUrl = baseURL + short
+			return &response, nil
+		} else if errors.Is(err, storage.ErrAddressConflict) {
+			response.Error = err.Error()
+			return &response, nil
 		}
-		return &response, nil
+		return nil, err
 	}
 }

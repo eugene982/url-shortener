@@ -78,6 +78,7 @@ func TestNewApplication(t *testing.T) {
 		err := a.Start()
 		require.NoError(t, err)
 	}()
+	go a.startDeletionShortUrls()
 
 	time.Sleep(time.Second)
 

@@ -12,7 +12,7 @@ type TrustedSubnet string
 func (t TrustedSubnet) Serve(next http.Handler) http.Handler {
 
 	_, subnet, err := net.ParseCIDR(string(t))
-	if err != nil {
+	if t != "" && err != nil {
 		logger.Error(err)
 	}
 

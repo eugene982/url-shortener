@@ -28,6 +28,7 @@ type protoServer struct {
 type GRPCServer struct {
 	listen net.Listener
 	server *grpc.Server
+	proto  *protoServer
 }
 
 func NewGRPCServer(a *Application, addr string) (*GRPCServer, error) {
@@ -45,7 +46,7 @@ func NewGRPCServer(a *Application, addr string) (*GRPCServer, error) {
 	// создаём gRPC-сервер без зарегистрированной службы
 	srv.server = grpc.NewServer()
 
-	server := protoServer{
+	srv.proto = &protoServer{
 		pingHandler:        ping.NewGRPCPingHandler(a.store),
 		findHandler:        root.NewGRPCFindAddrHandler(a.store),
 		createHandler:      root.NewGRPCCreateShortHandler(a.baseURL, a.store, a.shortener),
@@ -55,13 +56,18 @@ func NewGRPCServer(a *Application, addr string) (*GRPCServer, error) {
 	}
 
 	// регистрируем сервис
-	proto.RegisterShortenerServer(srv.server, &server)
+	proto.RegisterShortenerServer(srv.server, srv.proto)
 
 	return &srv, nil
 }
 
 func (s *GRPCServer) Start() error {
 	return s.server.Serve(s.listen)
+}
+
+func (s *GRPCServer) Close() error {
+	s.server.Stop()
+	return s.listen.Close()
 }
 
 func (s *protoServer) Ping(ctx context.Context, in *proto.PingRequest) (*proto.PingResponse, error) {
@@ -80,7 +86,7 @@ func (s *protoServer) BatchShort(ctx context.Context, in *proto.BatchRequest) (*
 	return s.batchHandler(ctx, in)
 }
 
-func (s *protoServer) GetUserURLsHandler(ctx context.Context, in *proto.UserURLsRequest) (*proto.UserURLsResponse, error) {
+func (s *protoServer) GetUserURLs(ctx context.Context, in *proto.UserURLsRequest) (*proto.UserURLsResponse, error) {
 	return s.userURLsHandler(ctx, in)
 }
 

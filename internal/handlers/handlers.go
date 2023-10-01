@@ -12,11 +12,6 @@ import (
 	"github.com/eugene982/url-shortener/proto"
 )
 
-// BaseURLGetter интетрфейс получения основного адреса.
-// type BaseURLGetter interface {
-// 	GetBaseURL() string
-// }
-
 // Pinger интерфейс проверки связи с сервисом.
 type Pinger interface {
 	Ping(context.Context) error

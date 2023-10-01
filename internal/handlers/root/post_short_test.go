@@ -11,15 +11,10 @@ import (
 	"github.com/eugene982/url-shortener/internal/middleware"
 	"github.com/eugene982/url-shortener/internal/model"
 	"github.com/eugene982/url-shortener/internal/storage"
+	"github.com/eugene982/url-shortener/proto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-type baseURLGetterFunc func() string
-
-func (f baseURLGetterFunc) GetBaseURL() string {
-	return f()
-}
 
 type setterFunc func() error
 
@@ -105,6 +100,80 @@ func TestCreateShortHandler(t *testing.T) {
 			if tcase.want.code != 404 {
 				assert.Equal(t, tcase.want.short, string(body))
 			}
+		})
+	}
+
+}
+
+func TestGRPCCreateShortHandler(t *testing.T) {
+
+	type want struct {
+		err   string
+		short string
+	}
+
+	testErr := errors.New("some write error")
+
+	tests := []struct {
+		name string
+		url  string
+		err  error
+		want want
+	}{
+		{
+			name: "ok",
+			url:  "ya.ru",
+			want: want{
+				err:   "",
+				short: "/YA.RU",
+			},
+		},
+		{
+			name: "conflict",
+			url:  "ya.ru",
+			err:  storage.ErrAddressConflict,
+			want: want{
+				err:   storage.ErrAddressConflict.Error(),
+				short: "",
+			},
+		},
+		{
+			name: "err",
+			url:  "ya.ru",
+			err:  testErr,
+			want: want{
+				err:   "",
+				short: "",
+			},
+		},
+	}
+
+	for _, tcase := range tests {
+		t.Run(tcase.name, func(t *testing.T) {
+
+			base := "/"
+
+			setter := setterFunc(func() error {
+				return tcase.err
+			})
+
+			shorten := shortenerFunc(func(s string) (string, error) {
+				return strings.ToUpper(s), nil
+			})
+
+			in := proto.CreateShortRequest{
+				User:        "user",
+				OriginalUrl: tcase.url,
+			}
+
+			resp, err := NewGRPCCreateShortHandler(base, setter, shorten)(context.Background(), &in)
+			if tcase.err == testErr {
+				assert.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tcase.want.err, resp.Error)
+			assert.Equal(t, tcase.want.short, resp.ShortUrl)
 		})
 	}
 

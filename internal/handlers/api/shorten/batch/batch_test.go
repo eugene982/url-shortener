@@ -2,6 +2,7 @@ package batch
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http/httptest"
 	"strings"
@@ -9,15 +10,10 @@ import (
 
 	"github.com/eugene982/url-shortener/internal/middleware"
 	"github.com/eugene982/url-shortener/internal/model"
+	"github.com/eugene982/url-shortener/proto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-type baseURLGetterFunc func() string
-
-func (f baseURLGetterFunc) GetBaseURL() string {
-	return f()
-}
 
 type updaterFunc func() error
 
@@ -119,6 +115,124 @@ func TestBatchHandler(t *testing.T) {
 			} else {
 				assert.Equal(t, tt.want.response, string(body))
 			}
+
+		})
+	}
+}
+
+func TestGRPCBatchHandler(t *testing.T) {
+
+	type want struct {
+		err      error
+		response *proto.BatchResponse
+	}
+	tests := []struct {
+		name    string
+		request *proto.BatchRequest
+		want    want
+	}{
+		{
+			name:    "request empty",
+			request: &proto.BatchRequest{},
+			want: want{
+				err:      nil,
+				response: &proto.BatchResponse{},
+			},
+		},
+		{
+			name: "request err correlation",
+			request: &proto.BatchRequest{
+				Request: []*proto.BatchRequest_Batch{
+					{
+						CorrelationId: "",
+						OriginalUrl:   "ya.ru",
+					},
+				},
+			},
+			want: want{
+				err: nil,
+				response: &proto.BatchResponse{
+					Error: "correlation ID is empty",
+				},
+			},
+		},
+		{
+			name: "request err url",
+			request: &proto.BatchRequest{
+				Request: []*proto.BatchRequest_Batch{
+					{
+						CorrelationId: "1",
+						OriginalUrl:   "",
+					},
+				},
+			},
+			want: want{
+				err: nil,
+				response: &proto.BatchResponse{
+					Error: "original URL is empty",
+				},
+			},
+		},
+		{
+			name: "request err",
+			request: &proto.BatchRequest{
+				Request: []*proto.BatchRequest_Batch{
+					{
+						CorrelationId: "1",
+						OriginalUrl:   "ya.ru",
+					},
+				},
+			},
+			want: want{
+				err: errors.New("some error"),
+			},
+		},
+		{
+			name: "request ya.ru",
+			request: &proto.BatchRequest{
+				Request: []*proto.BatchRequest_Batch{
+					{
+						CorrelationId: "1",
+						OriginalUrl:   "ya.ru",
+					},
+				},
+			},
+			want: want{
+				err: nil,
+				response: &proto.BatchResponse{
+					Responce: []*proto.BatchResponse_Batch{
+						{
+							CorrelationId: "1",
+							ShortUrl:      "/YA.RU",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			base := "/"
+
+			shorten := shortenerFunc(func(s string) (string, error) {
+				return strings.ToUpper(s), nil
+			})
+
+			updater := updaterFunc(func() error {
+				return tt.want.err
+			})
+
+			resp, err := NewGRPCBatchHandler(base, updater, shorten)(context.TODO(), tt.request)
+			if tt.want.err != nil {
+				assert.Equal(t, err, tt.want.err)
+				return
+			}
+			require.NoError(t, err)
+
+			//
+			assert.Equal(t, tt.want.response, resp)
 
 		})
 	}

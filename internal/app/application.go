@@ -204,11 +204,6 @@ func (a *Application) startDeletionShortUrls() {
 	}
 }
 
-// GetBaseURL - функция возвращает основной адрес.
-func (a *Application) GetBaseURL() string {
-	return a.baseURL
-}
-
 // Структура для складывания в канал пары Пользоватьль - Ссылки
 type deleteUserData struct {
 	userID    string

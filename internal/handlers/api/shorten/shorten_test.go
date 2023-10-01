@@ -13,12 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type baseURLGetterFunc func() string
-
-func (f baseURLGetterFunc) GetBaseURL() string {
-	return f()
-}
-
 type setterFunc func() error
 
 func (f setterFunc) Set(ctx context.Context, data model.StoreData) error {

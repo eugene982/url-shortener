@@ -1,3 +1,4 @@
+// Package batch - заггрузка ссылок списком
 package batch
 
 import (
@@ -94,7 +95,7 @@ func NewBatchHandler(baseURL string, u handlers.Updater, s shortener.Shortener) 
 	}
 }
 
-// NewGRPCBatchHandler
+// NewGRPCBatchHandler короткая ссылка для grpc
 func NewGRPCBatchHandler(baseURL string, u handlers.Updater, s shortener.Shortener) handlers.BatchShortHandler {
 	return func(ctx context.Context, in *proto.BatchRequest) (*proto.BatchResponse, error) {
 		var response proto.BatchResponse
