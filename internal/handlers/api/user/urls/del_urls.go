@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/golang/protobuf/ptypes/empty"
+
+	"github.com/eugene982/url-shortener/gen/go/proto"
 	"github.com/eugene982/url-shortener/internal/handlers"
 	"github.com/eugene982/url-shortener/internal/logger"
 	"github.com/eugene982/url-shortener/internal/middleware"
-	"github.com/eugene982/url-shortener/proto"
 )
 
 // NewDeleteURLsHandlers эндпоинт удаление ссылок пользователя.
@@ -49,8 +51,8 @@ func NewDeleteURLsHandlers(d handlers.UserShortAsyncDeleter) http.HandlerFunc {
 
 func NewGRPCDeleteURLsHandlers(d handlers.UserShortAsyncDeleter) handlers.DelUserURLsHandler {
 
-	return func(ctx context.Context, in *proto.DelUserURLsRequest) (*proto.DelUserURLsResponse, error) {
+	return func(ctx context.Context, in *proto.DelUserURLsRequest) (*empty.Empty, error) {
 		d.DeleteUserShortAsync(in.User, in.ShortUrl)
-		return &proto.DelUserURLsResponse{}, nil
+		return &empty.Empty{}, nil
 	}
 }

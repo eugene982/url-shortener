@@ -4,14 +4,15 @@ import (
 	"context"
 	"net"
 
+	"github.com/golang/protobuf/ptypes/empty"
 	"google.golang.org/grpc"
 
+	"github.com/eugene982/url-shortener/gen/go/proto"
 	"github.com/eugene982/url-shortener/internal/handlers"
 	"github.com/eugene982/url-shortener/internal/handlers/api/shorten/batch"
 	"github.com/eugene982/url-shortener/internal/handlers/api/user/urls"
 	"github.com/eugene982/url-shortener/internal/handlers/ping"
 	"github.com/eugene982/url-shortener/internal/handlers/root"
-	"github.com/eugene982/url-shortener/proto"
 )
 
 type protoServer struct {
@@ -65,7 +66,7 @@ func (s *GRPCServer) Start() error {
 	return s.server.Serve(s.listen)
 }
 
-func (s *protoServer) Ping(ctx context.Context, in *proto.PingRequest) (*proto.PingResponse, error) {
+func (s *protoServer) Ping(ctx context.Context, in *empty.Empty) (*proto.PingResponse, error) {
 	return s.pingHandler(ctx, in)
 }
 
@@ -85,6 +86,6 @@ func (s *protoServer) GetUserURLs(ctx context.Context, in *proto.UserURLsRequest
 	return s.userURLsHandler(ctx, in)
 }
 
-func (s *protoServer) DelUserURLs(ctx context.Context, in *proto.DelUserURLsRequest) (*proto.DelUserURLsResponse, error) {
+func (s *protoServer) DelUserURLs(ctx context.Context, in *proto.DelUserURLsRequest) (*empty.Empty, error) {
 	return s.delUserURLsHandler(ctx, in)
 }

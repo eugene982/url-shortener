@@ -7,10 +7,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/eugene982/url-shortener/gen/go/proto"
 	"github.com/eugene982/url-shortener/internal/handlers"
 	"github.com/eugene982/url-shortener/internal/logger"
 	"github.com/eugene982/url-shortener/internal/storage"
-	"github.com/eugene982/url-shortener/proto"
 )
 
 // NewFindAddrHandler эндпоинт получение полного адреса по короткой ссылке.

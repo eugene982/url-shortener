@@ -1,13 +1,21 @@
 syntax = "proto3";
 
-package rpc_shortener;
+import "google/protobuf/empty.proto";
 
-option go_package = "url-shortener/proto";
+package rpc_shortener.v1;
 
-// Ping
-message PingRequest {    
+option go_package = "github.com/eugene982/url-shortener/proto";
+
+service Shortener {
+    rpc Ping(google.protobuf.Empty) returns (PingResponse);
+    rpc FindAddr(FindAddrRequest) returns (FindAddrResponse);
+    rpc CreateShort(CreateShortRequest) returns (CreateShortResponse);
+    rpc BatchShort(BatchRequest) returns (BatchResponse);
+    rpc GetUserURLs(UserURLsRequest) returns (UserURLsResponse);
+    rpc DelUserURLs(DelUserURLsRequest) returns (google.protobuf.Empty);
 }
 
+// Ping
 message PingResponse {
     string message = 1;
 }
@@ -70,18 +78,5 @@ message UserURLsResponse {
 message DelUserURLsRequest {
     string user               = 1;
     repeated string short_url = 2;    
-}
-
-message DelUserURLsResponse {
-    string error = 1;  
-}
-
-service Shortener {
-    rpc Ping(PingRequest) returns (PingResponse);
-    rpc FindAddr(FindAddrRequest) returns (FindAddrResponse);
-    rpc CreateShort(CreateShortRequest) returns (CreateShortResponse);
-    rpc BatchShort(BatchRequest) returns (BatchResponse);
-    rpc GetUserURLs(UserURLsRequest) returns (UserURLsResponse);
-    rpc DelUserURLs(DelUserURLsRequest) returns (DelUserURLsResponse);
 }
 

@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/eugene982/url-shortener/gen/go/proto"
 	"github.com/eugene982/url-shortener/internal/handlers"
 	"github.com/eugene982/url-shortener/internal/logger"
 	"github.com/eugene982/url-shortener/internal/middleware"
 	"github.com/eugene982/url-shortener/internal/model"
 	"github.com/eugene982/url-shortener/internal/shortener"
-	"github.com/eugene982/url-shortener/proto"
 )
 
 // NewBatchHandler Генерирование короткой ссылки и сохранеине её во временном хранилище

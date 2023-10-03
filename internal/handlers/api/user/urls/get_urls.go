@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/eugene982/url-shortener/gen/go/proto"
 	"github.com/eugene982/url-shortener/internal/handlers"
 	"github.com/eugene982/url-shortener/internal/logger"
 	"github.com/eugene982/url-shortener/internal/middleware"
 	"github.com/eugene982/url-shortener/internal/model"
-	"github.com/eugene982/url-shortener/proto"
 )
 
 // NewUserURLsHandler эндпоинт получения списка ссылок пользователя.
@@ -69,11 +69,6 @@ func NewGRPCUserURLsHandler(baseURL string, u handlers.UserURLGetter) handlers.G
 		if err != nil {
 			logger.Error(err)
 			return nil, err
-		}
-
-		if len(urls) == 0 {
-			response.Error = "no content"
-			return &response, err
 		}
 
 		response.Response = make([]*proto.UserURLsResponse_UserURL, len(urls))

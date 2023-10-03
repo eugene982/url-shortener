@@ -6,9 +6,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/eugene982/url-shortener/gen/go/proto"
 	"github.com/eugene982/url-shortener/internal/model"
 	"github.com/eugene982/url-shortener/internal/storage"
-	"github.com/eugene982/url-shortener/proto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

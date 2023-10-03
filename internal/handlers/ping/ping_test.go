@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/eugene982/url-shortener/internal/handlers"
-	"github.com/eugene982/url-shortener/proto"
 )
 
 type PingerFunc func() error
@@ -69,7 +68,7 @@ func TestGRPCPingHandler(t *testing.T) {
 				}
 			})
 
-			_, err := NewGRPCPingHandler(pinger)(ctx, &proto.PingRequest{})
+			_, err := NewGRPCPingHandler(pinger)(ctx, nil)
 			if tcase.wantErr {
 				assert.Error(t, err)
 			} else {

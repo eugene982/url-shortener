@@ -1,6 +1,8 @@
-BUILD_VERSION="v1.25.1"
+BUILD_VERSION="v1.25.2"
 BUILD_DATE=$(shell date +"%Y/%m/%d %H:%M")
 BUILD_COMMIT=$(shell git rev-parse HEAD)
+
+export PATH := $(PATH):$(shell go env GOPATH)/bin
 
 BIN_PATH=./bin/shortener
 SRC_PATH=./internal
@@ -97,7 +99,6 @@ alltests: tests build test1 test2 test3 test4 test5 test6 test7 test8 test9 test
 
 # gRPC
 protoc: 
-	export PATH="$(PATH):$(shell go env GOPATH)/bin" && \
-	protoc --go_out=. --go_opt=paths=source_relative \
-	--go-grpc_out=. --go-grpc_opt=paths=source_relative \
+	protoc --go_out=gen/go --go_opt=paths=source_relative \
+	--go-grpc_out=gen/go --go-grpc_opt=paths=source_relative \
 	proto/shortener.proto

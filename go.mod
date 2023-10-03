@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/go-chi/chi/v5 v5.0.10
+	github.com/golang/protobuf v1.5.3
 	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
 	github.com/jackc/pgx/v5 v5.4.2
 	github.com/kisielk/errcheck v1.6.3
@@ -19,7 +20,6 @@ require (
 require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.1.0 // indirect
 	github.com/goccy/go-json v0.9.11 // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/gostaticanalysis/analysisutil v0.7.1 // indirect
 	github.com/gostaticanalysis/comment v1.4.2 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect

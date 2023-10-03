@@ -1,4 +1,4 @@
-// Package app gприложение
+// Package app приложение
 package app
 
 import (

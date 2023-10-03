@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/eugene982/url-shortener/proto"
+	"github.com/eugene982/url-shortener/gen/go/proto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

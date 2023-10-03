@@ -6,10 +6,12 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/golang/protobuf/ptypes/empty"
+
+	"github.com/eugene982/url-shortener/gen/go/proto"
 	"github.com/eugene982/url-shortener/internal/middleware"
 	"github.com/eugene982/url-shortener/internal/model"
 	"github.com/eugene982/url-shortener/internal/shortener"
-	"github.com/eugene982/url-shortener/proto"
 )
 
 // Pinger интерфейс проверки связи с сервисом.
@@ -90,9 +92,9 @@ func GetAndWriteUserShort(ctx context.Context, sh shortener.Shortener, setter Se
 
 // gRPC
 
-type PingHandler func(context.Context, *proto.PingRequest) (*proto.PingResponse, error)
+type PingHandler func(context.Context, *empty.Empty) (*proto.PingResponse, error)
 type FindAddrHandler func(context.Context, *proto.FindAddrRequest) (*proto.FindAddrResponse, error)
 type CreateShortHandler func(context.Context, *proto.CreateShortRequest) (*proto.CreateShortResponse, error)
 type BatchShortHandler func(context.Context, *proto.BatchRequest) (*proto.BatchResponse, error)
 type GetUserURLsHandler func(context.Context, *proto.UserURLsRequest) (*proto.UserURLsResponse, error)
-type DelUserURLsHandler func(context.Context, *proto.DelUserURLsRequest) (*proto.DelUserURLsResponse, error)
+type DelUserURLsHandler func(context.Context, *proto.DelUserURLsRequest) (*empty.Empty, error)

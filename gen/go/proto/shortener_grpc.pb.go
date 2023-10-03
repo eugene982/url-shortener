@@ -8,6 +8,7 @@ package proto
 
 import (
 	context "context"
+	empty "github.com/golang/protobuf/ptypes/empty"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -19,24 +20,24 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Shortener_Ping_FullMethodName        = "/rpc_shortener.Shortener/Ping"
-	Shortener_FindAddr_FullMethodName    = "/rpc_shortener.Shortener/FindAddr"
-	Shortener_CreateShort_FullMethodName = "/rpc_shortener.Shortener/CreateShort"
-	Shortener_BatchShort_FullMethodName  = "/rpc_shortener.Shortener/BatchShort"
-	Shortener_GetUserURLs_FullMethodName = "/rpc_shortener.Shortener/GetUserURLs"
-	Shortener_DelUserURLs_FullMethodName = "/rpc_shortener.Shortener/DelUserURLs"
+	Shortener_Ping_FullMethodName        = "/rpc_shortener.v1.Shortener/Ping"
+	Shortener_FindAddr_FullMethodName    = "/rpc_shortener.v1.Shortener/FindAddr"
+	Shortener_CreateShort_FullMethodName = "/rpc_shortener.v1.Shortener/CreateShort"
+	Shortener_BatchShort_FullMethodName  = "/rpc_shortener.v1.Shortener/BatchShort"
+	Shortener_GetUserURLs_FullMethodName = "/rpc_shortener.v1.Shortener/GetUserURLs"
+	Shortener_DelUserURLs_FullMethodName = "/rpc_shortener.v1.Shortener/DelUserURLs"
 )
 
 // ShortenerClient is the client API for Shortener service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ShortenerClient interface {
-	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
+	Ping(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*PingResponse, error)
 	FindAddr(ctx context.Context, in *FindAddrRequest, opts ...grpc.CallOption) (*FindAddrResponse, error)
 	CreateShort(ctx context.Context, in *CreateShortRequest, opts ...grpc.CallOption) (*CreateShortResponse, error)
 	BatchShort(ctx context.Context, in *BatchRequest, opts ...grpc.CallOption) (*BatchResponse, error)
 	GetUserURLs(ctx context.Context, in *UserURLsRequest, opts ...grpc.CallOption) (*UserURLsResponse, error)
-	DelUserURLs(ctx context.Context, in *DelUserURLsRequest, opts ...grpc.CallOption) (*DelUserURLsResponse, error)
+	DelUserURLs(ctx context.Context, in *DelUserURLsRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 }
 
 type shortenerClient struct {
@@ -47,7 +48,7 @@ func NewShortenerClient(cc grpc.ClientConnInterface) ShortenerClient {
 	return &shortenerClient{cc}
 }
 
-func (c *shortenerClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error) {
+func (c *shortenerClient) Ping(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*PingResponse, error) {
 	out := new(PingResponse)
 	err := c.cc.Invoke(ctx, Shortener_Ping_FullMethodName, in, out, opts...)
 	if err != nil {
@@ -92,8 +93,8 @@ func (c *shortenerClient) GetUserURLs(ctx context.Context, in *UserURLsRequest, 
 	return out, nil
 }
 
-func (c *shortenerClient) DelUserURLs(ctx context.Context, in *DelUserURLsRequest, opts ...grpc.CallOption) (*DelUserURLsResponse, error) {
-	out := new(DelUserURLsResponse)
+func (c *shortenerClient) DelUserURLs(ctx context.Context, in *DelUserURLsRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
+	out := new(empty.Empty)
 	err := c.cc.Invoke(ctx, Shortener_DelUserURLs_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -105,12 +106,12 @@ func (c *shortenerClient) DelUserURLs(ctx context.Context, in *DelUserURLsReques
 // All implementations must embed UnimplementedShortenerServer
 // for forward compatibility
 type ShortenerServer interface {
-	Ping(context.Context, *PingRequest) (*PingResponse, error)
+	Ping(context.Context, *empty.Empty) (*PingResponse, error)
 	FindAddr(context.Context, *FindAddrRequest) (*FindAddrResponse, error)
 	CreateShort(context.Context, *CreateShortRequest) (*CreateShortResponse, error)
 	BatchShort(context.Context, *BatchRequest) (*BatchResponse, error)
 	GetUserURLs(context.Context, *UserURLsRequest) (*UserURLsResponse, error)
-	DelUserURLs(context.Context, *DelUserURLsRequest) (*DelUserURLsResponse, error)
+	DelUserURLs(context.Context, *DelUserURLsRequest) (*empty.Empty, error)
 	mustEmbedUnimplementedShortenerServer()
 }
 
@@ -118,7 +119,7 @@ type ShortenerServer interface {
 type UnimplementedShortenerServer struct {
 }
 
-func (UnimplementedShortenerServer) Ping(context.Context, *PingRequest) (*PingResponse, error) {
+func (UnimplementedShortenerServer) Ping(context.Context, *empty.Empty) (*PingResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
 }
 func (UnimplementedShortenerServer) FindAddr(context.Context, *FindAddrRequest) (*FindAddrResponse, error) {
@@ -133,7 +134,7 @@ func (UnimplementedShortenerServer) BatchShort(context.Context, *BatchRequest) (
 func (UnimplementedShortenerServer) GetUserURLs(context.Context, *UserURLsRequest) (*UserURLsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUserURLs not implemented")
 }
-func (UnimplementedShortenerServer) DelUserURLs(context.Context, *DelUserURLsRequest) (*DelUserURLsResponse, error) {
+func (UnimplementedShortenerServer) DelUserURLs(context.Context, *DelUserURLsRequest) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DelUserURLs not implemented")
 }
 func (UnimplementedShortenerServer) mustEmbedUnimplementedShortenerServer() {}
@@ -150,7 +151,7 @@ func RegisterShortenerServer(s grpc.ServiceRegistrar, srv ShortenerServer) {
 }
 
 func _Shortener_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PingRequest)
+	in := new(empty.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -162,7 +163,7 @@ func _Shortener_Ping_Handler(srv interface{}, ctx context.Context, dec func(inte
 		FullMethod: Shortener_Ping_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ShortenerServer).Ping(ctx, req.(*PingRequest))
+		return srv.(ShortenerServer).Ping(ctx, req.(*empty.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -261,7 +262,7 @@ func _Shortener_DelUserURLs_Handler(srv interface{}, ctx context.Context, dec fu
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var Shortener_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "rpc_shortener.Shortener",
+	ServiceName: "rpc_shortener.v1.Shortener",
 	HandlerType: (*ShortenerServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

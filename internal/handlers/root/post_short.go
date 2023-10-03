@@ -7,11 +7,11 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/eugene982/url-shortener/gen/go/proto"
 	"github.com/eugene982/url-shortener/internal/handlers"
 	"github.com/eugene982/url-shortener/internal/logger"
 	"github.com/eugene982/url-shortener/internal/shortener"
 	"github.com/eugene982/url-shortener/internal/storage"
-	"github.com/eugene982/url-shortener/proto"
 )
 
 // NewCreateShortHandler эндпоинт получения короткой ссылки.
