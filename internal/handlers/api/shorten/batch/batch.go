@@ -7,7 +7,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/eugene982/url-shortener/gen/go/proto"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
+	"github.com/eugene982/url-shortener/gen/go/proto/v1"
 	"github.com/eugene982/url-shortener/internal/handlers"
 	"github.com/eugene982/url-shortener/internal/logger"
 	"github.com/eugene982/url-shortener/internal/middleware"
@@ -95,7 +98,7 @@ func NewBatchHandler(baseURL string, u handlers.Updater, s shortener.Shortener) 
 	}
 }
 
-// NewGRPCBatchHandler короткая ссылка для grpc
+// NewGRPCBatchHandler генерирование короткой ссылки из набора grpc
 func NewGRPCBatchHandler(baseURL string, u handlers.Updater, s shortener.Shortener) handlers.BatchShortHandler {
 	return func(ctx context.Context, in *proto.BatchRequest) (*proto.BatchResponse, error) {
 		var response proto.BatchResponse
@@ -105,25 +108,11 @@ func NewGRPCBatchHandler(baseURL string, u handlers.Updater, s shortener.Shorten
 		for _, batch := range in.Request {
 			var err error
 
-			if batch.CorrelationId == "" {
-				response.Error = "correlation ID is empty"
-			}
-			if batch.OriginalUrl == "" {
-				response.Error = "original URL is empty"
-				logger.Warn("request is not valid",
-					"error", response.Error)
-			}
-			if response.Error != "" {
-				logger.Warn("request is not valid",
-					"error", response.Error)
-				return &response, nil
-			}
-
 			short, err := s.Short(batch.OriginalUrl)
 			if err != nil {
 				logger.Warn("error get short url",
 					"error", err)
-				return nil, err
+				return nil, status.Error(codes.Internal, err.Error())
 			}
 
 			response.Responce = append(response.Responce, &proto.BatchResponse_Batch{
@@ -141,7 +130,7 @@ func NewGRPCBatchHandler(baseURL string, u handlers.Updater, s shortener.Shorten
 
 		if err := u.Update(ctx, write); err != nil {
 			logger.Error(fmt.Errorf("error write data in storage: %w", err))
-			return nil, err
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 
 		return &response, nil

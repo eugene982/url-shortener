@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.3.0
 // - protoc             v3.12.4
-// source: proto/shortener.proto
+// source: proto/v1/shortener.proto
 
 package proto
 
@@ -20,23 +20,29 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Shortener_Ping_FullMethodName        = "/rpc_shortener.v1.Shortener/Ping"
-	Shortener_FindAddr_FullMethodName    = "/rpc_shortener.v1.Shortener/FindAddr"
-	Shortener_CreateShort_FullMethodName = "/rpc_shortener.v1.Shortener/CreateShort"
-	Shortener_BatchShort_FullMethodName  = "/rpc_shortener.v1.Shortener/BatchShort"
-	Shortener_GetUserURLs_FullMethodName = "/rpc_shortener.v1.Shortener/GetUserURLs"
-	Shortener_DelUserURLs_FullMethodName = "/rpc_shortener.v1.Shortener/DelUserURLs"
+	Shortener_Ping_FullMethodName        = "/url_shortener.v1.Shortener/Ping"
+	Shortener_FindAddr_FullMethodName    = "/url_shortener.v1.Shortener/FindAddr"
+	Shortener_CreateShort_FullMethodName = "/url_shortener.v1.Shortener/CreateShort"
+	Shortener_BatchShort_FullMethodName  = "/url_shortener.v1.Shortener/BatchShort"
+	Shortener_GetUserURLs_FullMethodName = "/url_shortener.v1.Shortener/GetUserURLs"
+	Shortener_DelUserURLs_FullMethodName = "/url_shortener.v1.Shortener/DelUserURLs"
 )
 
 // ShortenerClient is the client API for Shortener service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ShortenerClient interface {
+	// Ping проверка соединения
 	Ping(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*PingResponse, error)
+	// FindAddr получение оригинальной ссылки по сокращённой
 	FindAddr(ctx context.Context, in *FindAddrRequest, opts ...grpc.CallOption) (*FindAddrResponse, error)
+	// CreateShort создание сокращённой ссылки
 	CreateShort(ctx context.Context, in *CreateShortRequest, opts ...grpc.CallOption) (*CreateShortResponse, error)
+	// BatchShort пакетное создание сокращённых ссылок
 	BatchShort(ctx context.Context, in *BatchRequest, opts ...grpc.CallOption) (*BatchResponse, error)
+	// GetUserURLs получение списка пользовательских ссылок
 	GetUserURLs(ctx context.Context, in *UserURLsRequest, opts ...grpc.CallOption) (*UserURLsResponse, error)
+	// DelUserURLs удаление пользовательских ссылок
 	DelUserURLs(ctx context.Context, in *DelUserURLsRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 }
 
@@ -106,11 +112,17 @@ func (c *shortenerClient) DelUserURLs(ctx context.Context, in *DelUserURLsReques
 // All implementations must embed UnimplementedShortenerServer
 // for forward compatibility
 type ShortenerServer interface {
+	// Ping проверка соединения
 	Ping(context.Context, *empty.Empty) (*PingResponse, error)
+	// FindAddr получение оригинальной ссылки по сокращённой
 	FindAddr(context.Context, *FindAddrRequest) (*FindAddrResponse, error)
+	// CreateShort создание сокращённой ссылки
 	CreateShort(context.Context, *CreateShortRequest) (*CreateShortResponse, error)
+	// BatchShort пакетное создание сокращённых ссылок
 	BatchShort(context.Context, *BatchRequest) (*BatchResponse, error)
+	// GetUserURLs получение списка пользовательских ссылок
 	GetUserURLs(context.Context, *UserURLsRequest) (*UserURLsResponse, error)
+	// DelUserURLs удаление пользовательских ссылок
 	DelUserURLs(context.Context, *DelUserURLsRequest) (*empty.Empty, error)
 	mustEmbedUnimplementedShortenerServer()
 }
@@ -262,7 +274,7 @@ func _Shortener_DelUserURLs_Handler(srv interface{}, ctx context.Context, dec fu
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var Shortener_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "rpc_shortener.v1.Shortener",
+	ServiceName: "url_shortener.v1.Shortener",
 	HandlerType: (*ShortenerServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -291,5 +303,5 @@ var Shortener_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "proto/shortener.proto",
+	Metadata: "proto/v1/shortener.proto",
 }

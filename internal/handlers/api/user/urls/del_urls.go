@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 
-	"github.com/eugene982/url-shortener/gen/go/proto"
+	"github.com/eugene982/url-shortener/gen/go/proto/v1"
 	"github.com/eugene982/url-shortener/internal/handlers"
 	"github.com/eugene982/url-shortener/internal/logger"
 	"github.com/eugene982/url-shortener/internal/middleware"
@@ -49,6 +49,7 @@ func NewDeleteURLsHandlers(d handlers.UserShortAsyncDeleter) http.HandlerFunc {
 	}
 }
 
+// NewGRPCDeleteURLsHandlers асинхронное удаление ссылок пользователя
 func NewGRPCDeleteURLsHandlers(d handlers.UserShortAsyncDeleter) handlers.DelUserURLsHandler {
 
 	return func(ctx context.Context, in *proto.DelUserURLsRequest) (*empty.Empty, error) {

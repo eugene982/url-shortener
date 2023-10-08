@@ -8,7 +8,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 
-	"github.com/eugene982/url-shortener/gen/go/proto"
+	"github.com/eugene982/url-shortener/gen/go/proto/v1"
 	"github.com/eugene982/url-shortener/internal/middleware"
 	"github.com/eugene982/url-shortener/internal/model"
 	"github.com/eugene982/url-shortener/internal/shortener"

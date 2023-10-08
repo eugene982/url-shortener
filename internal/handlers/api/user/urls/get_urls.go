@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/eugene982/url-shortener/gen/go/proto"
+	"github.com/eugene982/url-shortener/gen/go/proto/v1"
 	"github.com/eugene982/url-shortener/internal/handlers"
 	"github.com/eugene982/url-shortener/internal/logger"
 	"github.com/eugene982/url-shortener/internal/middleware"
@@ -59,7 +59,7 @@ func NewUserURLsHandler(baseURL string, u handlers.UserURLGetter) http.HandlerFu
 	}
 }
 
-// NewGRPCUserURLsHandler список ссылок пользователя
+// NewGRPCUserURLsHandler возвращает список ссылок пользователя
 func NewGRPCUserURLsHandler(baseURL string, u handlers.UserURLGetter) handlers.GetUserURLsHandler {
 	return func(ctx context.Context, in *proto.UserURLsRequest) (*proto.UserURLsResponse, error) {
 		var response proto.UserURLsResponse

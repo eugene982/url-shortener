@@ -4,10 +4,12 @@ import (
 	"context"
 	"net"
 
+	"github.com/bufbuild/protovalidate-go"
 	"github.com/golang/protobuf/ptypes/empty"
+	protovalidate_middleware "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/protovalidate"
 	"google.golang.org/grpc"
 
-	"github.com/eugene982/url-shortener/gen/go/proto"
+	"github.com/eugene982/url-shortener/gen/go/proto/v1"
 	"github.com/eugene982/url-shortener/internal/handlers"
 	"github.com/eugene982/url-shortener/internal/handlers/api/shorten/batch"
 	"github.com/eugene982/url-shortener/internal/handlers/api/user/urls"
@@ -38,14 +40,21 @@ func NewGRPCServer(a *Application, addr string) (*GRPCServer, error) {
 		err error
 	)
 
+	validator, err := protovalidate.New()
+	if err != nil {
+		return nil, err
+	}
+
 	// определяем адрес сервера
 	srv.listen, err = net.Listen("tcp", addr)
 	if err != nil {
 		return nil, err
 	}
 
-	// создаём gRPC-сервер без зарегистрированной службы
-	srv.server = grpc.NewServer()
+	// создаём gRPC-сервер без зарегистрированной службы с прослойкой валидации входящих данных
+	srv.server = grpc.NewServer(grpc.UnaryInterceptor(
+		protovalidate_middleware.UnaryServerInterceptor(validator),
+	))
 
 	srv.proto = &protoServer{
 		pingHandler:        ping.NewGRPCPingHandler(a.store),

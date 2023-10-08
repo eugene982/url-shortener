@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/eugene982/url-shortener/gen/go/proto"
+	"github.com/eugene982/url-shortener/gen/go/proto/v1"
 	"github.com/eugene982/url-shortener/internal/model"
 	"github.com/eugene982/url-shortener/internal/storage"
 	"github.com/stretchr/testify/assert"
@@ -95,7 +95,7 @@ func TestGRPCFindAddrHandler(t *testing.T) {
 			"request 404",
 			"/",
 			testErr,
-			want{"", ""},
+			want{testErr.Error(), ""},
 		},
 		{
 			"request not found /",
@@ -120,13 +120,11 @@ func TestGRPCFindAddrHandler(t *testing.T) {
 			}
 
 			resp, err := NewGRPCFindAddrHandler(getter)(context.Background(), &in)
-			if tt.err == testErr {
-				assert.Equal(t, err, tt.err)
+			if tt.want.err != "" {
+				assert.Error(t, err)
 				return
 			}
-
 			require.NoError(t, err)
-			assert.Equal(t, tt.want.err, resp.Error)
 			assert.Contains(t, tt.want.location, resp.OriginalUrl)
 		})
 	}

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/eugene982/url-shortener/gen/go/proto"
+	"github.com/eugene982/url-shortener/gen/go/proto/v1"
 	"github.com/eugene982/url-shortener/internal/middleware"
 	"github.com/eugene982/url-shortener/internal/model"
 	"github.com/eugene982/url-shortener/internal/storage"
@@ -108,7 +108,7 @@ func TestCreateShortHandler(t *testing.T) {
 func TestGRPCCreateShortHandler(t *testing.T) {
 
 	type want struct {
-		err   string
+		err   bool
 		short string
 	}
 
@@ -124,7 +124,7 @@ func TestGRPCCreateShortHandler(t *testing.T) {
 			name: "ok",
 			url:  "ya.ru",
 			want: want{
-				err:   "",
+				err:   false,
 				short: "/YA.RU",
 			},
 		},
@@ -133,7 +133,7 @@ func TestGRPCCreateShortHandler(t *testing.T) {
 			url:  "ya.ru",
 			err:  storage.ErrAddressConflict,
 			want: want{
-				err:   storage.ErrAddressConflict.Error(),
+				err:   true,
 				short: "",
 			},
 		},
@@ -142,7 +142,7 @@ func TestGRPCCreateShortHandler(t *testing.T) {
 			url:  "ya.ru",
 			err:  testErr,
 			want: want{
-				err:   "",
+				err:   true,
 				short: "",
 			},
 		},
@@ -167,12 +167,11 @@ func TestGRPCCreateShortHandler(t *testing.T) {
 			}
 
 			resp, err := NewGRPCCreateShortHandler(base, setter, shorten)(context.Background(), &in)
-			if tcase.err == testErr {
+			if tcase.want.err {
 				assert.Error(t, err)
 				return
 			}
 			require.NoError(t, err)
-			assert.Equal(t, tcase.want.err, resp.Error)
 			assert.Equal(t, tcase.want.short, resp.ShortUrl)
 		})
 	}

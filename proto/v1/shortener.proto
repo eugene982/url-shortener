@@ -1,17 +1,29 @@
 syntax = "proto3";
 
 import "google/protobuf/empty.proto";
+import "buf/validate/validate.proto";
 
-package rpc_shortener.v1;
+package url_shortener.v1;
 
 option go_package = "github.com/eugene982/url-shortener/proto";
 
 service Shortener {
+    // Ping проверка соединения
     rpc Ping(google.protobuf.Empty) returns (PingResponse);
+   
+    // FindAddr получение оригинальной ссылки по сокращённой
     rpc FindAddr(FindAddrRequest) returns (FindAddrResponse);
+   
+    // CreateShort создание сокращённой ссылки
     rpc CreateShort(CreateShortRequest) returns (CreateShortResponse);
+   
+    // BatchShort пакетное создание сокращённых ссылок
     rpc BatchShort(BatchRequest) returns (BatchResponse);
+   
+    // GetUserURLs получение списка пользовательских ссылок
     rpc GetUserURLs(UserURLsRequest) returns (UserURLsResponse);
+
+    // DelUserURLs удаление пользовательских ссылок
     rpc DelUserURLs(DelUserURLsRequest) returns (google.protobuf.Empty);
 }
 
@@ -21,33 +33,34 @@ message PingResponse {
 }
 
 // FindAddr
+
 message FindAddrRequest {
-    string short_url = 1;
+    string short_url = 1[(buf.validate.field).string.min_len = 1];
 }
 
 message FindAddrResponse {
     string original_url = 1;
-    string error        = 2;
 }
 
 // CreateShort
+
 message CreateShortRequest {
-    string user         = 1;
-    string original_url = 2;
+    string user         = 1[(buf.validate.field).string.min_len = 1];
+    string original_url = 2[(buf.validate.field).string.min_len = 1];
 }
 
 message CreateShortResponse {
     string short_url = 1;
-    string error     = 2;
 }
 
 // Batch
+
 message BatchRequest {
     message Batch {
-        string correlation_id = 1;
-        string original_url   = 2;
+        string correlation_id = 1[(buf.validate.field).string.min_len = 1];
+        string original_url   = 2[(buf.validate.field).string.min_len = 1];
     }
-    string user            = 1;
+    string user            = 1[(buf.validate.field).string.min_len = 1];
     repeated Batch request = 2; 
 }
 
@@ -57,12 +70,12 @@ message BatchResponse {
         string short_url      = 2;
     }
     repeated Batch responce = 1;
-    string error            = 2;
 }
 
 // UserURLs
+
 message UserURLsRequest {
-    string user = 1;
+    string user = 1[(buf.validate.field).string.min_len = 1];
 }
 
 message UserURLsResponse {
@@ -71,12 +84,12 @@ message UserURLsResponse {
         string short_url    = 2;
     }
     repeated UserURL response = 1;
-    string error = 2;
 }
 
-// Del user urls
+// DelUserURLs
+
 message DelUserURLsRequest {
-    string user               = 1;
-    repeated string short_url = 2;    
+    string user               = 1[(buf.validate.field).string.min_len = 1];
+    repeated string short_url = 2[(buf.validate.field).string.min_len = 1];    
 }
 

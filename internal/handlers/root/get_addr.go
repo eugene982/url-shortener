@@ -1,3 +1,4 @@
+// Package root ручки полученя адреса по короткой ссылке
 package root
 
 import (
@@ -6,8 +7,10 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
-	"github.com/eugene982/url-shortener/gen/go/proto"
+	"github.com/eugene982/url-shortener/gen/go/proto/v1"
 	"github.com/eugene982/url-shortener/internal/handlers"
 	"github.com/eugene982/url-shortener/internal/logger"
 	"github.com/eugene982/url-shortener/internal/storage"
@@ -47,13 +50,13 @@ func NewGRPCFindAddrHandler(g handlers.AddrGetter) handlers.FindAddrHandler {
 		data, err := g.GetAddr(ctx, in.ShortUrl)
 		if err == nil {
 			if data.DeletedFlag {
-				responce.Error = "Delete"
+				return nil, status.Error(codes.NotFound, "Delete")
 			} else {
 				responce.OriginalUrl = data.OriginalURL
 			}
 		} else if errors.Is(storage.ErrAddressNotFound, err) {
 			logger.Info(err.Error(), "short", in.ShortUrl)
-			responce.Error = err.Error()
+			return nil, status.Error(codes.NotFound, err.Error())
 		} else {
 			logger.Error(err, "short", in.ShortUrl)
 			return nil, err

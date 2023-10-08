@@ -1,3 +1,4 @@
+// Package root ручки полученя генерации короткой ссылки
 package root
 
 import (
@@ -7,11 +8,13 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/eugene982/url-shortener/gen/go/proto"
+	"github.com/eugene982/url-shortener/gen/go/proto/v1"
 	"github.com/eugene982/url-shortener/internal/handlers"
 	"github.com/eugene982/url-shortener/internal/logger"
 	"github.com/eugene982/url-shortener/internal/shortener"
 	"github.com/eugene982/url-shortener/internal/storage"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // NewCreateShortHandler эндпоинт получения короткой ссылки.
@@ -63,9 +66,8 @@ func NewGRPCCreateShortHandler(baseURL string, setter handlers.Setter, sh shorte
 			response.ShortUrl = baseURL + short
 			return &response, nil
 		} else if errors.Is(err, storage.ErrAddressConflict) {
-			response.Error = err.Error()
-			return &response, nil
+			return nil, status.Error(codes.AlreadyExists, err.Error())
 		}
-		return nil, err
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 }
