@@ -8,18 +8,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/eugene982/url-shortener/gen/go/proto/v1"
 	"github.com/eugene982/url-shortener/internal/middleware"
 	"github.com/eugene982/url-shortener/internal/model"
 	"github.com/eugene982/url-shortener/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-type baseURLGetterFunc func() string
-
-func (f baseURLGetterFunc) GetBaseURL() string {
-	return f()
-}
 
 type setterFunc func() error
 
@@ -77,9 +72,7 @@ func TestCreateShortHandler(t *testing.T) {
 			r := httptest.NewRequest("GET", "/", strings.NewReader(tcase.body))
 			w := httptest.NewRecorder()
 
-			base := baseURLGetterFunc(func() string {
-				return "/"
-			})
+			base := "/"
 
 			setter := setterFunc(func() error {
 				if tcase.want.code == 404 {
@@ -107,6 +100,79 @@ func TestCreateShortHandler(t *testing.T) {
 			if tcase.want.code != 404 {
 				assert.Equal(t, tcase.want.short, string(body))
 			}
+		})
+	}
+
+}
+
+func TestGRPCCreateShortHandler(t *testing.T) {
+
+	type want struct {
+		err   bool
+		short string
+	}
+
+	testErr := errors.New("some write error")
+
+	tests := []struct {
+		name string
+		url  string
+		err  error
+		want want
+	}{
+		{
+			name: "ok",
+			url:  "ya.ru",
+			want: want{
+				err:   false,
+				short: "/YA.RU",
+			},
+		},
+		{
+			name: "conflict",
+			url:  "ya.ru",
+			err:  storage.ErrAddressConflict,
+			want: want{
+				err:   true,
+				short: "",
+			},
+		},
+		{
+			name: "err",
+			url:  "ya.ru",
+			err:  testErr,
+			want: want{
+				err:   true,
+				short: "",
+			},
+		},
+	}
+
+	for _, tcase := range tests {
+		t.Run(tcase.name, func(t *testing.T) {
+
+			base := "/"
+
+			setter := setterFunc(func() error {
+				return tcase.err
+			})
+
+			shorten := shortenerFunc(func(s string) (string, error) {
+				return strings.ToUpper(s), nil
+			})
+
+			in := proto.CreateShortRequest{
+				User:        "user",
+				OriginalUrl: tcase.url,
+			}
+
+			resp, err := NewGRPCCreateShortHandler(base, setter, shorten)(context.Background(), &in)
+			if tcase.want.err {
+				assert.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tcase.want.short, resp.ShortUrl)
 		})
 	}
 

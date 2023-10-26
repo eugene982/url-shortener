@@ -1,6 +1,8 @@
-BUILD_VERSION="v1.23.1"
+BUILD_VERSION="v1.25.3"
 BUILD_DATE=$(shell date +"%Y/%m/%d %H:%M")
 BUILD_COMMIT=$(shell git rev-parse HEAD)
+
+export PATH := $(PATH):$(shell go env GOPATH)/bin
 
 BIN_PATH=./bin/shortener
 SRC_PATH=./internal
@@ -94,3 +96,21 @@ test15:
 
 alltests: tests build test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11 test12 test13 test14 test15
 	@echo "all tests - PASS"
+
+# gRPC
+protoc: 
+	protoc --go_out=gen/go --go_opt=paths=source_relative \
+	--go-grpc_out=gen/go --go-grpc_opt=paths=source_relative \
+	proto/v1/shortener.proto
+
+# run client rpc test
+pbclient:
+	go run cmd/grpcclient/main.go
+
+# Error 403
+# User Not Authorized
+# This email isn't authorized to access the Buf Schema Registry
+# не смог я получить доступ к сайту ни с каким vpn
+# скопировал фалы локально
+bufgen:
+	buf generate --path proto

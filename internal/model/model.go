@@ -72,3 +72,9 @@ type UserURLResponse struct {
 	OriginalURL string `json:"original_url"`
 	ShortURL    string `json:"short_url"`
 }
+
+// StatsResponse - ответ возвращает количество сокращений и пользователей
+type StatsResponse struct {
+	URLs  int `json:"urls"`
+	Users int `json:"users"`
+}

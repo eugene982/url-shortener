@@ -116,8 +116,8 @@ func SetCookieUserID(userID string, w http.ResponseWriter) error {
 }
 
 // GetUserID возвращает идентификатор пользователя из контекста
-func GetUserID(r *http.Request) (string, error) {
-	val := r.Context().Value(contextKeyUserID)
+func GetUserID(ctx context.Context) (string, error) {
+	val := ctx.Value(contextKeyUserID)
 	if val == nil {
 		return "", fmt.Errorf("user id not found")
 	}

@@ -11,9 +11,7 @@ import (
 
 func ExampleNewBatchHandler() {
 
-	base := baseURLGetterFunc(func() string {
-		return "/"
-	})
+	base := "/"
 
 	updater := updaterFunc(func() error {
 		return nil

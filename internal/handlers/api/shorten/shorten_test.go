@@ -13,12 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type baseURLGetterFunc func() string
-
-func (f baseURLGetterFunc) GetBaseURL() string {
-	return f()
-}
-
 type setterFunc func() error
 
 func (f setterFunc) Set(ctx context.Context, data model.StoreData) error {
@@ -82,9 +76,7 @@ func TestRouterHandlerApiShorten(t *testing.T) {
 			r.Header.Set("Content-Type", tt.req.contentType)
 			w := httptest.NewRecorder()
 
-			base := baseURLGetterFunc(func() string {
-				return "/"
-			})
+			base := "/"
 
 			setter := setterFunc(func() error {
 				return nil

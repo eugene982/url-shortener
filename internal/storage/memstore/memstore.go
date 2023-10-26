@@ -169,3 +169,22 @@ func (m *MemStore) DeleteShort(ctx context.Context, shortURLs []string) error {
 
 	return nil
 }
+
+// Пометка на удаление
+func (m *MemStore) Stats(ctx context.Context) (URLs int, users int, err error) {
+	select {
+	case <-ctx.Done():
+		return 0, 0, ctx.Err()
+	default:
+	}
+
+	URLs = len(m.addrList)
+
+	// пользователи могут повторяться, группируем
+	usrGrp := make(map[string]bool, URLs)
+	for _, d := range m.addrList {
+		usrGrp[d.UserID] = true
+	}
+	users = len(usrGrp)
+	return
+}

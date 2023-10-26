@@ -1,9 +1,13 @@
 package urls
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
+	"github.com/golang/protobuf/ptypes/empty"
+
+	"github.com/eugene982/url-shortener/gen/go/proto/v1"
 	"github.com/eugene982/url-shortener/internal/handlers"
 	"github.com/eugene982/url-shortener/internal/logger"
 	"github.com/eugene982/url-shortener/internal/middleware"
@@ -32,7 +36,7 @@ func NewDeleteURLsHandlers(d handlers.UserShortAsyncDeleter) http.HandlerFunc {
 		}
 
 		// Получаем идентификатор пользователя из контекста
-		userID, err := middleware.GetUserID(r)
+		userID, err := middleware.GetUserID(r.Context())
 		if err != nil {
 			logger.Error(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -42,5 +46,14 @@ func NewDeleteURLsHandlers(d handlers.UserShortAsyncDeleter) http.HandlerFunc {
 		d.DeleteUserShortAsync(userID, request)
 
 		w.WriteHeader(http.StatusAccepted)
+	}
+}
+
+// NewGRPCDeleteURLsHandlers асинхронное удаление ссылок пользователя
+func NewGRPCDeleteURLsHandlers(d handlers.UserShortAsyncDeleter) handlers.DelUserURLsHandler {
+
+	return func(ctx context.Context, in *proto.DelUserURLsRequest) (*empty.Empty, error) {
+		d.DeleteUserShortAsync(in.User, in.ShortUrl)
+		return &empty.Empty{}, nil
 	}
 }

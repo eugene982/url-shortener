@@ -11,9 +11,7 @@ import (
 
 func ExampleNewShortenHandler() {
 
-	base := baseURLGetterFunc(func() string {
-		return "localhosr:80/"
-	})
+	base := "localhost:80/"
 
 	setter := setterFunc(func() error {
 		return nil
@@ -39,6 +37,6 @@ func ExampleNewShortenHandler() {
 
 	// Output:
 	// 201
-	// {"result":"localhosr:80/YA.RU"}
+	// {"result":"localhost:80/YA.RU"}
 
 }

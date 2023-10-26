@@ -186,6 +186,28 @@ func (p *PgxStore) DeleteShort(ctx context.Context, shortURLs []string) error {
 	return tx.Commit()
 }
 
+// Stats возвращаем статистику
+func (p *PgxStore) Stats(ctx context.Context) (URLs int, users int, err error) {
+	query := `
+		SELECT 
+			COUNT(DISTINCT user_id) as Users, 
+			COUNT(short_url) as Urls
+		FROM address`
+
+	var res struct {
+		Users int
+		Urls  int
+	}
+
+	if err = p.db.GetContext(ctx, &res, query); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, 0, nil
+		}
+		return 0, 0, err
+	}
+	return res.Urls, res.Users, nil
+}
+
 // При первом запуске база может быть пустая
 func createTableIfNonExists(db *sqlx.DB) error {
 	query := `

@@ -24,4 +24,5 @@ type Storage interface {
 	Update(ctx context.Context, list []model.StoreData) error
 	GetUserURLs(ctx context.Context, userID string) ([]model.StoreData, error)
 	DeleteShort(ctx context.Context, shortURLs []string) error
+	Stats(ctx context.Context) (URLs int, users int, err error)
 }
